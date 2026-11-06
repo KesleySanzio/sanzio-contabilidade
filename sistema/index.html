@@ -1,0 +1,1446 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Sanzio Contabilidade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+/* Layout: barra lateral fixa de módulos + área de trabalho; fichas abrem em painel lateral. Vira abas no celular. */
+:root{
+  --bg:#F3F6F5; --surface:#FFFFFF; --sunk:#E9EEEC; --line:#D3DCD8; --fg:#15201C; --muted:#5A6A63;
+  --accent:#1F6F5C; --accent-ink:#FFFFFF; --accent-soft:#DAEDE6;
+  --info:#2C5B8E; --info-soft:#DEE8F4; --warn:#8F5600; --warn-soft:#FAEBD3;
+  --bad:#A2382C; --bad-soft:#F7DFDA; --ok:#2D6A2E; --ok-soft:#DCEEDA;
+  --shadow:0 12px 40px rgba(16,32,26,.18);
+  --f-display:"Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1513; --surface:#172019; --sunk:#0B100E; --line:#2A3631; --fg:#E3ECE8; --muted:#93A39C;
+  --accent:#62C2A5; --accent-ink:#05241B; --accent-soft:#193A31;
+  --info:#8DB6E6; --info-soft:#1A2B40; --warn:#E3A84E; --warn-soft:#3A2A12;
+  --bad:#E78B7F; --bad-soft:#3F1F1B; --ok:#8DCB8E; --ok-soft:#1C3320; --shadow:0 12px 40px rgba(0,0,0,.5);
+  color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0F1513; --surface:#172019; --sunk:#0B100E; --line:#2A3631; --fg:#E3ECE8; --muted:#93A39C;
+  --accent:#62C2A5; --accent-ink:#05241B; --accent-soft:#193A31;
+  --info:#8DB6E6; --info-soft:#1A2B40; --warn:#E3A84E; --warn-soft:#3A2A12;
+  --bad:#E78B7F; --bad-soft:#3F1F1B; --ok:#8DCB8E; --ok-soft:#1C3320; --shadow:0 12px 40px rgba(0,0,0,.5);
+  color-scheme:dark; }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5}
+h1,h2,h3{font-family:var(--f-display);font-weight:650;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:1.7rem} h2{font-size:1.2rem} h3{font-size:1rem}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}
+.side{border-right:1px solid var(--line);padding-block:24px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:16px;display:flex;flex-direction:column;gap:24px;position:sticky;top:0;height:100vh}
+.brand{display:flex;flex-direction:column;gap:2px}
+.brand b{font-family:var(--f-display);font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-size:.78rem}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:6px;color:var(--fg);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--sunk)}
+.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.nav .count{font-family:var(--f-mono);font-size:.75rem;color:var(--muted)}
+.side .foot{margin-top:auto;font-size:.75rem;color:var(--muted)}
+.main{padding-block:28px 64px;padding-left:28px;padding-right:max(16px, env(safe-area-inset-right, 0px));min-width:0}
+.wrap{max-width:1100px;display:flex;flex-direction:column;gap:22px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.head p{margin:4px 0 0;color:var(--muted)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:7px 12px;border-radius:6px;cursor:pointer;font-weight:500;text-decoration:none;color:var(--fg);white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.danger.armed{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{padding:4px 9px;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.banner{border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:10px 14px;font-size:.9rem}
+.banner.warn{background:var(--warn-soft);border-color:transparent;color:var(--fg)}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.stat .v{font-family:var(--f-mono);font-size:1.35rem;font-weight:500;font-variant-numeric:tabular-nums}
+.stat .s{font-size:.8rem;color:var(--muted)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.search{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 10px;min-width:0;width:260px;max-width:100%}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 10px;cursor:pointer;font-size:.85rem;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;padding:9px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--sunk)}
+td.r,th.r{text-align:right}
+.name{font-weight:600}
+.sub{font-size:.82rem;color:var(--muted)}
+
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.76rem;font-weight:600;white-space:nowrap;background:var(--sunk);color:var(--muted)}
+.pill.info{background:var(--info-soft);color:var(--info)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.accent{background:var(--accent-soft);color:var(--accent)}
+.tag{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.04em;padding:1px 6px;border:1px solid var(--line);border-radius:4px;color:var(--muted);margin-left:6px;vertical-align:1px}
+
+.empty{padding:36px 16px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+
+/* Painel lateral (ficha) */
+.scrim{position:fixed;inset:0;background:rgba(10,20,16,.42);z-index:40}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(620px,100%);background:var(--bg);z-index:41;box-shadow:var(--shadow);display:flex;flex-direction:column;border-left:1px solid var(--line)}
+.sheet-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-top:calc(16px + env(safe-area-inset-top, 0px));padding-bottom:14px;padding-left:22px;padding-right:max(22px, env(safe-area-inset-right, 0px));border-bottom:1px solid var(--line);background:var(--surface)}
+.sheet-b{flex:1;overflow-y:auto;padding-block:18px 28px;padding-left:22px;padding-right:max(22px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:20px}
+.sheet-f{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));padding-left:22px;padding-right:max(22px, env(safe-area-inset-right, 0px));border-top:1px solid var(--line);background:var(--surface)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:transparent;padding:8px 12px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+
+fieldset{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+legend{grid-column:1/-1;padding:0;margin-bottom:6px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.full{grid-column:1/-1}
+.f label{font-size:.8rem;color:var(--muted);font-weight:500}
+.f input,.f select,.f textarea{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+.f textarea{min-height:70px;resize:vertical}
+.f input.bad{border-color:var(--bad)}
+.hint{font-size:.76rem;color:var(--muted)}
+.hint.bad{color:var(--bad)}
+
+.docs{display:flex;flex-direction:column;gap:8px}
+.doc{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.doc .ico{flex:none;width:34px;height:40px;border:1px solid var(--line);border-radius:3px;display:grid;place-items:center;font-family:var(--f-mono);font-size:.62rem;font-weight:500;color:var(--accent);background:var(--accent-soft)}
+.doc .meta{flex:1;min-width:0}
+.doc .meta a{color:var(--fg);font-weight:500;text-decoration:none;word-break:break-word}
+.doc .meta a:hover{text-decoration:underline}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+
+/* Editor de orçamento */
+.items{display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) 64px 104px 96px 30px;gap:8px;align-items:center}
+.item input{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 8px;width:100%;min-width:0}
+.item input.q,.item input.p{text-align:right;font-family:var(--f-mono)}
+.item .t{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.item-h{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.addrow{display:flex;gap:8px;flex-wrap:wrap}
+.addrow select{flex:1;min-width:180px;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 8px}
+.totals{display:flex;flex-direction:column;gap:4px;align-items:flex-end;padding-top:10px;border-top:1px solid var(--line)}
+.totals div{display:flex;gap:18px;justify-content:flex-end;min-width:240px}
+.totals span:last-child{font-family:var(--f-mono);font-variant-numeric:tabular-nums;min-width:110px;text-align:right}
+.totals .grand{font-size:1.15rem;font-weight:600}
+.totals .grand span:last-child{color:var(--accent)}
+
+/* Prévia do documento */
+.paper{background:#FFFFFF;color:#1B2420;border:1px solid var(--line);border-radius:4px;padding:26px 28px;font-size:.86rem;display:flex;flex-direction:column;gap:14px}
+.paper .ph{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:2px solid #1F6F5C;padding-bottom:10px}
+.paper .ph b{font-family:var(--f-display);font-size:1.15rem;color:#1F6F5C;letter-spacing:.02em}
+.paper table th{color:#5A6A63;border-bottom:1px solid #CBD6D1;padding:6px 4px;background:transparent}
+.paper table td{border-bottom:1px solid #E3E9E6;padding:6px 4px}
+.paper .tot{display:flex;justify-content:flex-end;gap:18px;font-weight:600;font-size:1rem}
+.paper .small{font-size:.78rem;color:#5A6A63}
+.paper .pix{display:flex;gap:16px;align-items:flex-start;border:1px solid #CBD6D1;border-radius:6px;padding:14px;background:#F6FAF8;flex-wrap:wrap}
+.paper .pix-qr{flex:none;border:1px solid #CBD6D1;border-radius:4px;padding:4px;background:#fff}
+.paper .pix-info{flex:1;min-width:200px;display:flex;flex-direction:column;gap:6px}
+.paper .pix dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;margin:0;font-size:.82rem}
+.paper .pix dt{color:#5A6A63}
+.paper .pix dd{margin:0;word-break:break-all}
+.paper .pix-code{font-size:.66rem;word-break:break-all;background:#fff;border:1px dashed #CBD6D1;border-radius:4px;padding:6px;color:#1B2420;user-select:all}
+.pixbox{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--sunk)}
+.pixbox svg{border-radius:4px;padding:4px}
+.pix-toggle{display:flex;gap:8px;align-items:center;font-size:.9rem}
+
+.status-row{display:flex;gap:6px;flex-wrap:wrap}
+.status-row button{border:1px solid var(--line);background:var(--surface);padding:5px 10px;border-radius:999px;cursor:pointer;font-size:.82rem}
+.status-row button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom, 0px));background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:6px;z-index:60;font-size:.9rem;max-width:calc(100% - 32px)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px}
+.list-plain{list-style:none;margin:0;padding:0}
+.list-plain li{display:flex;justify-content:space-between;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);align-items:center}
+.list-plain li:last-child{border-bottom:0}
+.list-plain li.click{cursor:pointer}
+.list-plain li.click:hover{background:var(--sunk)}
+
+/* Consulta rápida */
+.cq-bar{display:flex;gap:10px;align-items:center;background:var(--surface);border:1.5px solid var(--accent);border-radius:10px;padding:4px 6px 4px 14px}
+.cq-bar input{flex:1;min-width:0;border:0;background:transparent;font-size:1.1rem;padding:10px 0;outline:none}
+.cq-bar kbd{font-family:var(--f-mono);font-size:.75rem;border:1px solid var(--line);border-radius:4px;padding:1px 6px;color:var(--muted)}
+.cq{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:16px;align-items:start}
+.cq-list{list-style:none;margin:0;padding:6px;display:flex;flex-direction:column;gap:2px;max-height:70vh;overflow-y:auto}
+.cq-list button{width:100%;text-align:left;border:0;background:transparent;border-radius:6px;padding:8px 10px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.cq-list button:hover{background:var(--sunk)}
+.cq-list button[aria-current="true"]{background:var(--accent-soft)}
+.cq-list button[aria-current="true"] .name{color:var(--accent)}
+.card-h{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;padding:16px 18px;border-bottom:1px solid var(--line)}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.kv .row{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--line);min-width:0}
+.kv .row:nth-child(odd){border-right:1px solid var(--line)}
+.kv .row .k{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.kv .row .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;word-break:break-all}
+.kv .row .txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.copy{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 9px;font-size:.8rem;cursor:pointer;color:var(--accent);font-weight:600;flex:none}
+.copy:hover{border-color:var(--accent)}
+.copy.done{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.sec-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px 6px;flex-wrap:wrap}
+.acc{display:flex;flex-direction:column}
+.acc .a{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);gap:10px;align-items:center;padding:10px 18px;border-top:1px solid var(--line)}
+.acc .a .who{font-weight:600}
+.acc .a .who a{font-size:.78rem;font-weight:500;color:var(--accent);display:block}
+.acc .a .cred{display:flex;flex-direction:column;gap:4px;min-width:0}
+.acc .a .ln{display:flex;gap:8px;align-items:center;min-width:0}
+.acc .a .ln .lbl{font-size:.72rem;color:var(--muted);width:52px;flex:none}
+.acc .a .ln .v{font-family:var(--f-mono);word-break:break-all;flex:1;min-width:0}
+.acc .a .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.lock{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:14px 18px;border-top:1px solid var(--line);background:var(--sunk)}
+.lock input{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 10px;min-width:0;flex:1;max-width:260px}
+.vault-pill{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:999px}
+.vault-pill.on{background:var(--ok-soft);color:var(--ok)}
+.vault-pill.off{background:var(--sunk);color:var(--muted)}
+.links{display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line)}
+
+.login{position:fixed;inset:0;z-index:70;background:var(--bg);display:grid;place-items:center;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.login-card{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow)}
+@media (max-width:860px){
+  .cq{grid-template-columns:minmax(0,1fr)}
+  .cq-list{max-height:220px}
+  .kv{grid-template-columns:minmax(0,1fr)}
+  .kv .row:nth-child(odd){border-right:0}
+  .acc .a{grid-template-columns:minmax(0,1fr)}
+  .acc .a .acts{justify-content:flex-start}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;flex-direction:row;align-items:center;gap:12px;border-right:0;border-bottom:1px solid var(--line);padding-block:10px;padding-right:max(16px, env(safe-area-inset-right, 0px));overflow-x:auto}
+  .side .foot,.brand small{display:none}
+  .nav{flex-direction:row}
+  .nav .count{display:none}
+  .main{padding-left:max(16px, env(safe-area-inset-left, 0px))}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:520px){
+  fieldset{grid-template-columns:minmax(0,1fr)}
+  .item{grid-template-columns:minmax(0,1fr) 54px 88px 28px}
+  .item .t,.item-h .ht{display:none}
+  .paper{padding:18px}
+}
+@media (prefers-reduced-motion:no-preference){ .sheet{animation:slide .18s ease-out} @keyframes slide{from{transform:translateX(24px);opacity:.6}} }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>Sanzio</b><small>Contabilidade · clientes e orçamentos</small></div>
+    <nav class="nav" id="nav">
+      <a href="#consulta" data-r="consulta">Consulta rápida <span class="count">/</span></a>
+      <a href="#painel" data-r="painel">Painel</a>
+      <a href="#clientes" data-r="clientes">Clientes <span class="count" id="c-cli"></span></a>
+      <a href="#orcamentos" data-r="orcamentos">Orçamentos <span class="count" id="c-orc"></span></a>
+      <a href="#servicos" data-r="servicos">Serviços</a>
+      <a href="#ajustes" data-r="ajustes">Ajustes</a>
+    </nav>
+    <div class="foot" id="mode">Conectando…</div>
+  </aside>
+  <main class="main"><div class="wrap" id="view"></div></main>
+</div>
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+<div id="login-root"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, reauthenticateWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, collection, setDoc, deleteDoc as fsDelete, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { firebaseConfig, pastaDrive } from './firebase-config.js';
+/* ---------- utilidades ---------- */
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dig = v => String(v ?? '').replace(/\D/g, '');
+const brl = n => (Number(n)||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+const toNum = v => { if (typeof v === 'number') return v; const s = String(v??'').replace(/[^\d,.-]/g,''); if (!s) return 0; const n = s.includes(',') ? Number(s.replace(/\./g,'').replace(',','.')) : Number(s); return isFinite(n) ? n : 0; };
+const money2 = n => (Number(n)||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+const today = () => new Date().toISOString().slice(0,10);
+const fmtDate = iso => { if (!iso) return ''; const [y,m,d] = String(iso).slice(0,10).split('-'); return d ? `${d}/${m}/${y}` : iso; };
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + Number(n||0)); return d.toISOString().slice(0,10); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const norm = s => String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+
+function maskCNPJ(v){ const d = dig(v).slice(0,14); return d.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2'); }
+function maskCPF(v){ const d = dig(v).slice(0,11); return d.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); }
+function maskTel(v){ const d = dig(v).slice(0,11); if (d.length <= 10) return d.replace(/^(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2'); return d.replace(/^(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2'); }
+function validCPF(v){ const d = dig(v); if (d.length!==11 || /^(\d)\1+$/.test(d)) return false;
+  let s=0; for(let i=0;i<9;i++) s+= +d[i]*(10-i); let r=(s*10)%11; if(r===10) r=0; if(r!==+d[9]) return false;
+  s=0; for(let i=0;i<10;i++) s+= +d[i]*(11-i); r=(s*10)%11; if(r===10) r=0; return r===+d[10]; }
+function validCNPJ(v){ const d = dig(v); if (d.length!==14 || /^(\d)\1+$/.test(d)) return false;
+  const calc = n => { const w = n===12 ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2]; let s=0; for(let i=0;i<n;i++) s+= +d[i]*w[i]; const r=s%11; return r<2?0:11-r; };
+  return calc(12)===+d[12] && calc(13)===+d[13]; }
+
+const STATUS_ORC = {
+  rascunho:{l:'Rascunho', c:''}, enviado:{l:'Enviado', c:'info'}, aprovado:{l:'Aprovado', c:'warn'},
+  pago:{l:'Pago', c:'ok'}, recusado:{l:'Recusado', c:'bad'}
+};
+const TIPOS = ['MEI','ME / LTDA','Empresário individual','Pessoa física'];
+const STATUS_CLI = {ativo:{l:'Ativo',c:'ok'}, prospect:{l:'Prospect',c:'info'}, inativo:{l:'Inativo',c:''}};
+const DOC_CATS = ['Contrato social','Certificado digital','Guias e boletos','Declarações','Notas fiscais','Documentos pessoais','Outros'];
+
+/* ---------- PIX (BR Code / padrão EMV do Banco Central) ---------- */
+const PIX_TIPOS = {cpf:'CPF', cnpj:'CNPJ', email:'E-mail', telefone:'Telefone', aleatoria:'Chave aleatória'};
+const semAcento = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+function pixChaveNormalizada(tipo, chave){
+  const v = String(chave ?? '').trim();
+  if (tipo === 'cpf' || tipo === 'cnpj') return dig(v);
+  if (tipo === 'telefone'){ let d = dig(v); if (d.startsWith('55') && d.length >= 12) d = d.slice(2); return '+55' + d; }
+  if (tipo === 'email') return v.toLowerCase();
+  return v.toLowerCase();
+}
+function pixChaveErro(tipo, chave){
+  const v = String(chave ?? '').trim(); if (!v) return 'Informe a chave PIX.';
+  if (tipo === 'cpf' && !validCPF(v)) return 'O CPF da chave não confere.';
+  if (tipo === 'cnpj' && !validCNPJ(v)) return 'O CNPJ da chave não confere.';
+  if (tipo === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'O e-mail da chave não parece válido.';
+  if (tipo === 'telefone'){ const d = pixChaveNormalizada(tipo, v).slice(3); if (d.length < 10 || d.length > 11) return 'Informe o telefone com DDD.'; }
+  if (tipo === 'aleatoria' && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return 'A chave aleatória tem o formato 123e4567-e89b-12d3-a456-426614174000.';
+  return '';
+}
+const pixLimpo = (s, max) => semAcento(s).replace(/[^A-Za-z0-9 .,\-@/]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+function crc16(str){
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++){ crc ^= str.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF; }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+const emv = (id, val) => id + String(val.length).padStart(2, '0') + val;
+function pixPayload({chave, nome, cidade, valor, txid}){
+  const mai = emv('00', 'br.gov.bcb.pix') + emv('01', chave);
+  let p = emv('00', '01') + emv('26', mai) + emv('52', '0000') + emv('53', '986');
+  if (valor && Number(valor) > 0) p += emv('54', Number(valor).toFixed(2));
+  p += emv('58', 'BR') + emv('59', nome) + emv('60', cidade);
+  p += emv('62', emv('05', txid || '***'));
+  p += '6304';
+  return p + crc16(p);
+}
+function pixConfig(){
+  const e = S.empresa;
+  if (!e.pixChave || !e.pixNome || !e.pixCidade) return null;
+  if (pixChaveErro(e.pixTipo, e.pixChave)) return null;
+  return {tipo:e.pixTipo, chaveExibida:e.pixChave.trim(), chave:pixChaveNormalizada(e.pixTipo, e.pixChave),
+    nome:pixLimpo(e.pixNome, 25), cidade:pixLimpo(e.pixCidade, 15), banco:(e.pixBanco||'').trim(), titular:(e.pixNome||'').trim()};
+}
+function pixDoOrc(d){
+  const cfg = pixConfig(); if (!cfg || d.semPix) return null;
+  const txid = ('ORC' + String(d.numero || '').replace(/[^0-9A-Za-z]/g, '')).slice(0, 25);
+  return {...cfg, valor: total(d), txid, codigo: pixPayload({chave:cfg.chave, nome:cfg.nome, cidade:cfg.cidade, valor: total(d), txid})};
+}
+function qrMatrix(text){
+  if (!window.qrcode) return null;
+  try { const q = qrcode(0, 'M'); q.addData(text); q.make(); const n = q.getModuleCount(); const m = []; for (let r = 0; r < n; r++){ const row = []; for (let c = 0; c < n; c++) row.push(q.isDark(r, c)); m.push(row); } return m; }
+  catch(e){ return null; }
+}
+function qrSVG(text, px){
+  const m = qrMatrix(text); if (!m) return '';
+  const n = m.length, q = 4, size = n + q*2; let d = '';
+  m.forEach((row, r) => row.forEach((on, c) => { if (on) d += `M${c+q} ${r+q}h1v1h-1z`; }));
+  return `<svg viewBox="0 0 ${size} ${size}" width="${px}" height="${px}" role="img" aria-label="QR Code PIX" shape-rendering="crispEdges" style="background:#fff;display:block"><path d="${d}" fill="#000"/></svg>`;
+}
+const pixTipoLabel = t => PIX_TIPOS[t] || 'Chave';
+
+/* ---------- estado ---------- */
+const PORTAIS_PADRAO = [
+  'gov.br | https://sso.acesso.gov.br',
+  'e-CAC | https://cav.receita.fazenda.gov.br/autenticacao/login',
+  'Simples Nacional | https://www8.receita.fazenda.gov.br/SimplesNacional/',
+  'PGMEI (DAS do MEI) | https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao',
+  'NFS-e Nacional | https://www.nfse.gov.br/EmissorNacional',
+  'GISS Online | https://portal.gissonline.com.br',
+  'SIARE (SEF-MG) | https://www2.fazenda.mg.gov.br/sol/'
+].join('\n');
+const S = { clientes:[], orcamentos:[], servicos:[], cofre:[], cofreMeta:null, empresa:{nome:'Sanzio Contabilidade', contato:'', pagamento:'PIX ou transferência', validade:15, portais:PORTAIS_PADRAO}, loaded:{}, demo:false, drive:{} };
+let user = null, unsubs = [];
+let route = 'consulta', cliFilter = {q:'', tipo:'todos'}, orcFilter = 'todos';
+let cq = {q:'', sel:null, idx:0}; const shown = new Set();
+
+/* ---------- cofre (criptografia no navegador) ----------
+   A senha mestra nunca sai do navegador e nunca é gravada. O banco guarda só texto cifrado (AES-GCM, chave PBKDF2). */
+const te = new TextEncoder(), td = new TextDecoder();
+const b64 = buf => { const a = new Uint8Array(buf); let s=''; for (const b of a) s += String.fromCharCode(b); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+let vaultKey = null, plain = {}, lastAct = Date.now();
+const VAULT_IDLE_MIN = 15;
+const cryptoOk = !!(window.crypto && crypto.subtle);
+async function deriveKey(pass, salt){
+  const base = await crypto.subtle.importKey('raw', te.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:310000, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function encWith(key, obj){ const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, te.encode(JSON.stringify(obj))); return {iv:b64(iv), ct:b64(ct)}; }
+async function decWith(key, rec){ const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:unb64(rec.iv)}, key, unb64(rec.ct)); return JSON.parse(td.decode(pt)); }
+async function criarCofre(pass){
+  const salt = crypto.getRandomValues(new Uint8Array(16)); const key = await deriveKey(pass, salt);
+  const meta = {salt:b64(salt), check: await encWith(key, {ok:'sanzio'}), criadoEm: today()};
+  if (!S.demo) await saveMeta('cofre', meta);
+  S.cofreMeta = meta; vaultKey = key; await decryptAll(); render();
+}
+async function desbloquear(pass){
+  if (!S.cofreMeta) return false;
+  const key = await deriveKey(pass, unb64(S.cofreMeta.salt));
+  try { const r = await decWith(key, S.cofreMeta.check); if (r.ok !== 'sanzio') return false; } catch(e){ return false; }
+  vaultKey = key; lastAct = Date.now(); await decryptAll(); return true;
+}
+function bloquear(){ vaultKey = null; plain = {}; shown.clear(); render(); if (sheet?.tab === 'acessos'){ sheet.noFocus = true; drawSheet(); } }
+async function decryptAll(){
+  if (!vaultKey) return; const out = {};
+  for (const r of S.cofre){ try { out[r.id] = await decWith(vaultKey, r); } catch(e){} }
+  plain = out;
+}
+async function salvarAcessos(clienteId, obj){
+  if (!vaultKey) throw new Error('locked');
+  const rec = await encWith(vaultKey, obj);
+  plain[clienteId] = obj;
+  await put('cofre', clienteId, {...rec, atualizadoEm: today()});
+}
+const vaultOpen = () => !!vaultKey;
+const temAcessos = id => !!S.cofre.find(r => r.id === id);
+setInterval(() => { if (vaultKey && Date.now() - lastAct > VAULT_IDLE_MIN*60000){ bloquear(); toast('Cofre bloqueado por inatividade.'); } }, 30000);
+['pointerdown','keydown'].forEach(e => document.addEventListener(e, () => lastAct = Date.now(), true));
+
+/* ---------- camada de dados (Firebase Firestore) ----------
+   Tudo fica em users/{uid}/... — as regras do Firestore só deixam cada conta ler e gravar a própria pasta. */
+const sortBy = (arr, f, dir=1) => arr.sort((a,b) => (a[f] > b[f] ? dir : a[f] < b[f] ? -dir : 0));
+const ref = (...p) => doc(fs, 'users', user.uid, ...p);
+const colRef = c => collection(fs, 'users', user.uid, c);
+const fsErro = e => toast(e?.code === 'permission-denied' ? 'Sem permissão para gravar. Confira as regras do Firestore.' : 'Não foi possível salvar. Verifique a conexão; o sistema tenta de novo sozinho.');
+async function put(col, id, data){
+  if (S.demo){ const arr = S[col]; const i = arr.findIndex(x => x.id === id); const row = {...data, id}; if (i>=0) arr[i] = row; else arr.push(row); render(); return; }
+  // Sem await: a tela atualiza na hora pelo cache local e a gravação segue em segundo plano (funciona até sem internet).
+  setDoc(ref(col, id), data).catch(fsErro);
+}
+async function remove(col, id){
+  if (S.demo){ S[col] = S[col].filter(x => x.id !== id); render(); return; }
+  fsDelete(ref(col, id)).catch(() => toast('Não foi possível excluir.'));
+}
+async function saveEmpresa(data){
+  S.empresa = {...S.empresa, ...data};
+  if (S.demo){ render(); return; }
+  setDoc(ref('config', 'empresa'), S.empresa).catch(fsErro);
+}
+async function saveMeta(name, data){ if (S.demo) return; await setDoc(ref('config', name), data); }
+const strip = o => { const {id, ...rest} = o; return rest; };
+
+function listen(){
+  unsubs.forEach(u => u()); unsubs = [];
+  const onErr = e => { if (e.code === 'permission-denied') setMode('Sem acesso aos dados. Confira as regras do Firestore.'); };
+  for (const col of ['clientes','orcamentos','servicos']){
+    unsubs.push(onSnapshot(colRef(col), snap => {
+      S[col] = snap.docs.map(d => ({...d.data(), id:d.id}));
+      S.loaded[col] = true; render(); refreshSheet(col);
+    }, onErr));
+  }
+  unsubs.push(onSnapshot(ref('config','empresa'), s => { if (s.exists()) S.empresa = {...S.empresa, ...s.data()}; render(); }, onErr));
+  unsubs.push(onSnapshot(ref('config','cofre'), s => { S.cofreMeta = s.exists() ? s.data() : null; S.loaded.cofreMeta = true; render(); }, onErr));
+  unsubs.push(onSnapshot(ref('config','drive'), s => { S.drive = s.exists() ? s.data() : {}; }, onErr));
+  unsubs.push(onSnapshot(colRef('cofre'), async snap => {
+    S.cofre = snap.docs.map(d => ({...d.data(), id:d.id})); S.loaded.cofre = true;
+    if (vaultKey) await decryptAll();
+    render(); refreshSheet('cofre');
+  }, onErr));
+}
+
+/* ---------- Google Drive (documentos dos clientes) ----------
+   Escopo drive.file: o sistema só enxerga os arquivos e pastas que ele mesmo criou no seu Drive. */
+const DRIVE = 'https://www.googleapis.com/drive/v3', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+let driveTok = null, driveExp = 0;
+const driveOn = () => !!driveTok && Date.now() < driveExp - 60000;
+function guardarToken(result){
+  const cred = GoogleAuthProvider.credentialFromResult(result);
+  if (cred?.accessToken){ driveTok = cred.accessToken; driveExp = Date.now() + 55*60000; }
+}
+function provider(){ const p = new GoogleAuthProvider(); p.addScope(DRIVE_SCOPE); p.setCustomParameters({prompt:'select_account'}); return p; }
+async function conectarDrive(){
+  try { const r = await reauthenticateWithPopup(auth.currentUser, provider()); guardarToken(r); toast('Google Drive conectado.'); }
+  catch(e){ toast(e.code === 'auth/popup-blocked' ? 'O navegador bloqueou a janela do Google. Libere pop-ups para este site.' : e.code === 'auth/user-mismatch' ? 'Escolha a mesma conta Google com que você entrou no sistema.' : 'Não foi possível conectar ao Drive.'); }
+  if (sheet){ sheet.noFocus = true; drawSheet(); }
+}
+async function gapi(url, opts={}){
+  if (!driveOn()) throw Object.assign(new Error('drive-off'), {code:'drive-off'});
+  const r = await fetch(url, {...opts, headers:{Authorization:'Bearer ' + driveTok, ...(opts.headers||{})}});
+  if (r.status === 401){ driveTok = null; throw Object.assign(new Error('drive-off'), {code:'drive-off'}); }
+  if (!r.ok){ const t = await r.text().catch(() => ''); throw Object.assign(new Error(t), {code:'http-' + r.status}); }
+  return r.status === 204 ? null : r.json();
+}
+async function criarPasta(nome, parent){
+  const r = await gapi(DRIVE + '/files?fields=id', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name:nome, mimeType:'application/vnd.google-apps.folder', ...(parent ? {parents:[parent]} : {})})});
+  return r.id;
+}
+async function pastaExiste(id){ if (!id) return false; try { const f = await gapi(`${DRIVE}/files/${id}?fields=id,trashed`); return f && !f.trashed; } catch(e){ if (e.code === 'drive-off') throw e; return false; } }
+async function pastaRaiz(){
+  if (await pastaExiste(S.drive?.rootId)) return S.drive.rootId;
+  const id = await criarPasta(pastaDrive || 'Sanzio Contabilidade');
+  S.drive = {...(S.drive||{}), rootId:id}; await saveMeta('drive', S.drive); return id;
+}
+async function pastaCliente(c){
+  if (await pastaExiste(c.driveFolderId)) return c.driveFolderId;
+  const root = await pastaRaiz();
+  const id = await criarPasta(`${c.razao || c.responsavel}${c.cnpj ? ' — ' + maskCNPJ(c.cnpj) : ''}`, root);
+  const fresh = cliOf(c.id); await put('clientes', c.id, {...strip(fresh), driveFolderId:id}); return id;
+}
+async function enviarArquivo(file, folderId, desc){
+  const meta = {name:file.name, parents:[folderId], description:desc};
+  const fields = 'id,name,size,mimeType,webViewLink';
+  if (file.size <= 5*1024*1024){
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(meta)], {type:'application/json'}));
+    form.append('file', file);
+    return gapi(`${DRIVE_UP}/files?uploadType=multipart&fields=${fields}`, {method:'POST', body:form});
+  }
+  // Arquivos maiores: upload em duas etapas (resumable)
+  const ini = await fetch(`${DRIVE_UP}/files?uploadType=resumable&fields=${fields}`, {method:'POST',
+    headers:{Authorization:'Bearer ' + driveTok, 'Content-Type':'application/json; charset=UTF-8', 'X-Upload-Content-Type': file.type || 'application/octet-stream'},
+    body: JSON.stringify(meta)});
+  const loc = ini.ok && ini.headers.get('Location');
+  if (!loc) throw Object.assign(new Error('resumable'), {code:'http-' + ini.status});
+  const r = await fetch(loc, {method:'PUT', headers:{'Content-Type': file.type || 'application/octet-stream'}, body:file});
+  if (!r.ok) throw Object.assign(new Error('upload'), {code:'http-' + r.status});
+  return r.json();
+}
+
+const SERVICOS_PADRAO = [
+  {id:'s1', nome:'Parcelamento de dívida PGFN / Regularização fiscal da empresa', preco:180, ativo:true, descricao:''},
+  {id:'s2', nome:'Reopção pelo Simples Nacional e SIMEI', preco:180, ativo:true, descricao:''},
+  {id:'s3', nome:'Processo de instalação do certificado digital', preco:100, ativo:true, descricao:''},
+  {id:'s4', nome:'Emissão de nota fiscal avulsa', preco:70, ativo:true, descricao:''},
+  {id:'s5', nome:'Declaração anual MEI (DASN-SIMEI)', preco:120, ativo:true, descricao:''},
+];
+function demoData(){
+  S.demo = true;
+  S.servicos = [
+    {id:'s1', nome:'Parcelamento de dívida PGFN / Regularização fiscal da empresa', preco:180, ativo:true},
+    {id:'s2', nome:'Reopção pelo Simples Nacional e SIMEI', preco:180, ativo:true},
+    {id:'s3', nome:'Processo de instalação do certificado digital', preco:100, ativo:true},
+    {id:'s4', nome:'Emissão de nota fiscal avulsa', preco:70, ativo:true},
+    {id:'s5', nome:'Declaração anual MEI (DASN-SIMEI)', preco:120, ativo:true},
+  ];
+  S.clientes = [
+    {id:'c1', tipo:'ME / LTDA', status:'ativo', razao:'Padaria Exemplo LTDA', responsavel:'Maria Exemplo', cnpj:'11.222.333/0001-81', telefone:'(31) 99999-0000', email:'', exemplo:true, docs:[], criadoEm:'2026-10-01'},
+    {id:'c2', tipo:'MEI', status:'prospect', razao:'João Exemplo (MEI)', responsavel:'João Exemplo', cnpj:'', cpf:'', exemplo:true, docs:[], criadoEm:'2026-10-20'},
+  ];
+  S.orcamentos = [
+    {id:'o1', numero:'2026-001', clienteId:'c1', data:'2026-10-21', validade:'2026-11-05', status:'enviado', itens:[{nome:'Emissão de nota fiscal avulsa', qtd:2, preco:70},{nome:'Declaração anual MEI (DASN-SIMEI)', qtd:1, preco:120}], desconto:0, pagamento:'PIX', obs:'', exemplo:true},
+  ];
+  ['clientes','orcamentos','servicos','cofre','cofreMeta'].forEach(k => S.loaded[k] = true);
+}
+
+/* ---------- navegação ---------- */
+function go(){ const h = location.hash.replace('#',''); route = ['consulta','painel','clientes','orcamentos','servicos','ajustes'].includes(h) ? h : 'consulta'; render(); if (route === 'consulta') $('#cq-q')?.focus(); }
+window.addEventListener('hashchange', go);
+function setMode(t){ $('#mode').textContent = t; }
+
+function toast(msg){ const r = $('#toast-root'); r.innerHTML = `<div class="toast" role="status">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t = setTimeout(() => r.innerHTML = '', 2600); }
+
+/* ---------- cálculos ---------- */
+const subtotal = o => (o.itens||[]).reduce((s,i) => s + toNum(i.qtd) * toNum(i.preco), 0);
+const total = o => Math.max(0, subtotal(o) - toNum(o.desconto));
+const cliOf = id => S.clientes.find(c => c.id === id);
+const docId = c => c.cnpj ? maskCNPJ(c.cnpj) : c.cpf ? maskCPF(c.cpf) : '';
+function nextNumero(){ const y = new Date().getFullYear(); const nums = S.orcamentos.filter(o => String(o.numero||'').startsWith(y+'-')).map(o => +String(o.numero).split('-')[1] || 0); return `${y}-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3,'0')}`; }
+const pill = (st, map) => { const s = map[st] || {l:st, c:''}; return `<span class="pill ${s.c}">${esc(s.l)}</span>`; };
+
+/* ---------- render principal ---------- */
+function render(){
+  $$('#nav a').forEach(a => a.setAttribute('aria-current', a.dataset.r === route ? 'page' : 'false'));
+  $('#c-cli').textContent = S.clientes.length || '';
+  const abertos = S.orcamentos.filter(o => o.status === 'enviado' || o.status === 'aprovado').length;
+  $('#c-orc').textContent = abertos || '';
+  const v = $('#view');
+  const act = document.activeElement?.id;
+  const keep = {}; ['vault-pass','vault-new','vault-new2'].forEach(id => { const el = $('#'+id, v); if (el && el.value) keep[id] = el.value; });
+  v.innerHTML = ({consulta:vConsulta, painel:vPainel, clientes:vClientes, orcamentos:vOrcamentos, servicos:vServicos, ajustes:vAjustes}[route])();
+  for (const [id,val] of Object.entries(keep)){ const el = $('#'+id, v); if (el) el.value = val; }
+  if (act && v.querySelector('#'+act)){ const i = $('#'+act); i.focus(); if (i.setSelectionRange && i.type !== 'button') try { i.setSelectionRange(i.value.length, i.value.length); } catch(e){} }
+}
+const banner = () => S.demo ? `<div class="banner warn">Modo demonstração: os dados abaixo são exemplos e nada é salvo. Preencha o arquivo sistema/firebase-config.js para ativar o login e o banco de dados.</div>` : '';
+const loading = col => !S.loaded[col] ? `<div class="empty">Carregando…</div>` : '';
+
+/* ---------- consulta rápida ---------- */
+function portais(){ return String(S.empresa.portais || PORTAIS_PADRAO).split('\n').map(l => { const i = l.indexOf('|'); return i < 0 ? null : {nome:l.slice(0,i).trim(), url:l.slice(i+1).trim()}; }).filter(p => p && p.nome && /^https:\/\//.test(p.url)); }
+const portal = kw => portais().find(p => norm(p.nome).includes(kw));
+const portalLink = (kw, txt) => { const p = portal(kw); return p ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(txt || 'Abrir ' + p.nome)} ↗</a>` : ''; };
+function cqMatches(){
+  const q = norm(cq.q), qd = dig(cq.q);
+  let r = S.clientes;
+  if (q) r = r.filter(c => norm(c.razao).includes(q) || norm(c.responsavel).includes(q) || (qd.length >= 3 && [c.cnpj, c.cpf, c.ie, c.im, c.nire].some(x => dig(x).includes(qd))));
+  return sortBy([...r], 'razao');
+}
+function valueOf(cid, field){
+  if (field.startsWith('acc.')){ const p = field.slice(4).split('.'); let v = plain[cid]; for (const k of p) v = v?.[k]; return v == null ? '' : String(v); }
+  const c = cliOf(cid) || {};
+  if (field === 'nascimento') return fmtDate(c.nascimento);
+  if (['cnpj','cpf','ie','im','nire','telefone'].includes(field)) return dig(c[field]);
+  return String(c[field] ?? '');
+}
+function fieldRow(cid, k, label, display){
+  const raw = valueOf(cid, k);
+  return `<div class="row"><div class="txt"><span class="k">${label}</span><span class="v">${raw ? esc(display ?? raw) : '<span class="muted">—</span>'}</span></div>${raw ? `<button class="copy" data-copy="${k}" data-cid="${cid}" aria-label="Copiar ${label}">Copiar</button>` : ''}</div>`;
+}
+function secretLine(cid, field, lbl){
+  const v = valueOf(cid, field); const key = cid + '|' + field;
+  if (!v) return `<div class="ln"><span class="lbl">${lbl}</span><span class="v muted">não cadastrado</span></div>`;
+  return `<div class="ln"><span class="lbl">${lbl}</span><span class="v">${shown.has(key) ? esc(v) : '••••••••••'}</span><button class="btn ghost sm" data-show="${field}" data-cid="${cid}">${shown.has(key) ? 'Ocultar' : 'Mostrar'}</button><button class="copy" data-copy="${field}" data-cid="${cid}" aria-label="Copiar ${lbl}">Copiar</button></div>`;
+}
+function plainLine(cid, field, lbl, display){
+  const v = valueOf(cid, field);
+  if (!v) return `<div class="ln"><span class="lbl">${lbl}</span><span class="v muted">${field === 'cpf' ? 'cadastre o CPF' : field === 'im' ? 'cadastre a inscrição municipal' : 'não cadastrado'}</span></div>`;
+  return `<div class="ln"><span class="lbl">${lbl}</span><span class="v">${esc(display ?? v)}</span><button class="copy" data-copy="${field}" data-cid="${cid}" aria-label="Copiar ${lbl}">Copiar</button></div>`;
+}
+function lockBox(msg){
+  if (!cryptoOk) return `<div class="lock">O cofre não funciona neste navegador.</div>`;
+  if (!S.cofreMeta) return `<div class="lock"><span>O cofre de senhas ainda não foi criado.</span><a class="btn sm primary" href="#ajustes">Criar cofre</a></div>`;
+  return `<div class="lock"><span style="flex-basis:100%" class="sub">${msg || 'Digite a senha mestra para ver os acessos.'}</span>
+    <input type="password" id="vault-pass" data-vault-pass autocomplete="current-password" placeholder="Senha mestra" aria-label="Senha mestra">
+    <button class="btn primary sm" data-act="unlock">Desbloquear</button></div>`;
+}
+function acessosBlock(c){
+  const id = c.id, p = plain[id] || {};
+  if (!vaultOpen()) return lockBox(temAcessos(id) ? 'Este cliente tem acessos guardados. Digite a senha mestra para ver.' : '');
+  const outros = (p.outros || []).filter(o => o.rotulo || o.usuario || o.senha);
+  return `<div class="a"><div class="who">gov.br${portalLink('gov.br', 'Abrir gov.br')}${portalLink('e-cac', 'Abrir e-CAC')}</div>
+      <div class="cred">${plainLine(id, 'cpf', 'Login', c.cpf ? maskCPF(c.cpf) : '')}${secretLine(id, 'acc.govSenha', 'Senha')}</div></div>
+    <div class="a"><div class="who">Simples Nacional${portalLink('simples', 'Abrir Simples')}${c.tipo === 'MEI' ? portalLink('pgmei', 'Abrir PGMEI') : ''}</div>
+      <div class="cred">${plainLine(id, 'cnpj', 'CNPJ', c.cnpj ? maskCNPJ(c.cnpj) : '')}${secretLine(id, 'acc.codSimples', 'Código')}</div></div>
+    <div class="a"><div class="who">GISS Online${portalLink('giss', 'Abrir GISS')}</div>
+      <div class="cred">${plainLine(id, 'im', 'Usuário')}${secretLine(id, 'acc.gissSenha', 'Senha')}</div></div>
+    ${outros.map((o, i) => { const i0 = (p.outros||[]).indexOf(o); return `<div class="a"><div class="who">${esc(o.rotulo || 'Outro acesso')}${o.url && /^https:\/\//.test(o.url) ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">Abrir ↗</a>` : ''}</div>
+      <div class="cred">${o.usuario ? `<div class="ln"><span class="lbl">Usuário</span><span class="v">${esc(o.usuario)}</span><button class="copy" data-copy="acc.outros.${i0}.usuario" data-cid="${id}">Copiar</button></div>` : ''}${secretLine(id, `acc.outros.${i0}.senha`, 'Senha')}</div></div>`; }).join('')}`;
+}
+function vConsulta(){
+  const list = cqMatches();
+  if (!list.find(c => c.id === cq.sel)) cq.sel = list[Math.max(0, Math.min(cq.idx, list.length - 1))]?.id || null;
+  const c = cliOf(cq.sel);
+  const card = c ? `<section class="panel">
+      <div class="card-h"><div style="min-width:0"><span class="label">${esc(c.tipo || '')}</span><h2>${esc(c.razao || c.responsavel)}${c.exemplo ? '<span class="tag">EXEMPLO</span>' : ''}</h2>${c.razao && c.responsavel ? `<div class="sub">${esc(c.responsavel)}</div>` : ''}</div>
+        <div class="tools">${pill(c.status || 'ativo', STATUS_CLI)}<button class="btn sm" data-cli="${c.id}">Ficha completa</button></div></div>
+      <div class="kv">
+        ${fieldRow(c.id, 'cnpj', 'CNPJ', c.cnpj ? maskCNPJ(c.cnpj) : '')}
+        ${fieldRow(c.id, 'cpf', 'CPF', c.cpf ? maskCPF(c.cpf) : '')}
+        ${fieldRow(c.id, 'nascimento', 'Nascimento')}
+        ${fieldRow(c.id, 'ie', 'Inscrição Estadual')}
+        ${fieldRow(c.id, 'im', 'Inscrição Municipal')}
+        ${fieldRow(c.id, 'nire', 'NIRE')}
+        ${fieldRow(c.id, 'telefone', 'Telefone', c.telefone ? maskTel(c.telefone) : '')}
+        ${fieldRow(c.id, 'email', 'E-mail')}
+      </div>
+      <div class="sec-h"><h3>Acessos</h3><div class="tools">${vaultOpen() ? `<span class="vault-pill on">Cofre aberto</span><button class="btn sm" data-act="edit-acc" data-cid="${c.id}">Editar acessos</button><button class="btn sm ghost" data-act="lock">Bloquear</button>` : `<span class="vault-pill off">Cofre bloqueado</span>`}</div></div>
+      <div class="acc">${acessosBlock(c)}</div>
+      ${c.certVence ? `<div class="links"><span class="sub">Certificado digital vence em <b class="mono" ${c.certVence < addDays(today(), 30) ? 'style="color:var(--bad)"' : ''}>${fmtDate(c.certVence)}</b></span></div>` : ''}
+      <div class="links"><span class="sub" style="flex-basis:100%">CNPJ, CPF e inscrições são copiados só com os números.</span></div>
+    </section>` : `<section class="panel"><div class="empty">${S.clientes.length ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado ainda.'}</div></section>`;
+  return `${banner()}
+  <div class="cq-bar"><input id="cq-q" type="search" autocomplete="off" placeholder="Buscar cliente por nome, CNPJ, CPF ou inscrição" value="${esc(cq.q)}" aria-label="Buscar cliente"><kbd>/</kbd></div>
+  <div class="cq">
+    <section class="panel"><ul class="cq-list" role="listbox" aria-label="Clientes">${loading('clientes') || list.map(x => `<li><button data-cq="${x.id}" aria-current="${x.id === cq.sel}"><span class="name">${esc(x.razao || x.responsavel)}</span><span class="sub mono">${esc(docId(x)) || esc(x.tipo || '')}</span></button></li>`).join('')}</ul></section>
+    ${card}
+  </div>`;
+}
+
+function vPainel(){
+  const mes = today().slice(0,7);
+  const ativos = S.clientes.filter(c => c.status !== 'inativo').length;
+  const env = S.orcamentos.filter(o => o.status === 'enviado');
+  const apr = S.orcamentos.filter(o => o.status === 'aprovado');
+  const pagos = S.orcamentos.filter(o => o.status === 'pago' && String(o.pagoEm||'').startsWith(mes));
+  const sum = a => a.reduce((s,o) => s + total(o), 0);
+  const recentes = sortBy([...S.orcamentos], 'data', -1).slice(0,6);
+  const vencendo = S.orcamentos.filter(o => o.status === 'enviado' && o.validade && o.validade < today());
+  return `${banner()}
+  <div class="head"><div><h1>Painel</h1><p>${new Date().toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'})}</p></div>
+    <div class="tools"><button class="btn" data-act="novo-cli">Novo cliente</button><button class="btn primary" data-act="novo-orc">Novo orçamento</button></div></div>
+  <div class="stats">
+    <div class="stat"><span class="label">Clientes ativos</span><span class="v">${ativos}</span><span class="s">${S.clientes.length} cadastrados</span></div>
+    <div class="stat"><span class="label">Aguardando resposta</span><span class="v">${brl(sum(env))}</span><span class="s">${env.length} orçamento${env.length===1?'':'s'} enviado${env.length===1?'':'s'}</span></div>
+    <div class="stat"><span class="label">A receber</span><span class="v">${brl(sum(apr))}</span><span class="s">${apr.length} aprovado${apr.length===1?'':'s'}</span></div>
+    <div class="stat"><span class="label">Recebido no mês</span><span class="v">${brl(sum(pagos))}</span><span class="s">${pagos.length} pago${pagos.length===1?'':'s'} em ${new Date().toLocaleDateString('pt-BR',{month:'long'})}</span></div>
+  </div>
+  ${vencendo.length ? `<div class="banner">${vencendo.length} orçamento${vencendo.length>1?'s':''} enviado${vencendo.length>1?'s':''} passou da validade sem resposta: ${vencendo.map(o => `<a href="#" data-orc="${o.id}">nº ${esc(o.numero)}</a>`).join(', ')}.</div>` : ''}
+  <div class="grid2">
+    <section class="panel"><div class="panel-h"><h2>Orçamentos recentes</h2><a class="btn sm ghost" href="#orcamentos">Ver todos</a></div>
+      ${loading('orcamentos') || (recentes.length ? `<ul class="list-plain">${recentes.map(o => { const c = cliOf(o.clienteId); return `<li class="click" data-orc="${o.id}"><div style="min-width:0"><div class="name">${esc(c?.razao || o.clienteNome || 'Cliente removido')}</div><div class="sub mono">nº ${esc(o.numero)} · ${fmtDate(o.data)}</div></div><div style="text-align:right"><div class="num">${brl(total(o))}</div>${pill(o.status, STATUS_ORC)}</div></li>`; }).join('')}</ul>` : `<div class="empty">Nenhum orçamento ainda.<button class="btn primary" data-act="novo-orc">Montar o primeiro</button></div>`)}
+    </section>
+    <section class="panel"><div class="panel-h"><h2>Clientes</h2><a class="btn sm ghost" href="#clientes">Ver todos</a></div>
+      ${loading('clientes') || (S.clientes.length ? `<ul class="list-plain">${sortBy([...S.clientes],'razao').slice(0,6).map(c => `<li class="click" data-cli="${c.id}"><div style="min-width:0"><div class="name">${esc(c.razao || c.responsavel)}${c.exemplo?'<span class="tag">EXEMPLO</span>':''}</div><div class="sub">${esc(c.tipo||'')}</div></div><span class="sub">${(c.docs||[]).length} doc.</span></li>`).join('')}</ul>` : `<div class="empty">Nenhum cliente cadastrado.<div class="tools"><button class="btn primary" data-act="novo-cli">Cadastrar</button><button class="btn" data-act="importar">Importar da planilha</button></div></div>`)}
+    </section>
+  </div>`;
+}
+
+function vClientes(){
+  const q = norm(cliFilter.q), qd = dig(cliFilter.q);
+  let rows = S.clientes.filter(c => (cliFilter.tipo === 'todos' || c.tipo === cliFilter.tipo) &&
+    (!q || norm(c.razao).includes(q) || norm(c.responsavel).includes(q) || (qd && (dig(c.cnpj).includes(qd) || dig(c.cpf).includes(qd)))));
+  rows = sortBy(rows, 'razao');
+  return `${banner()}
+  <div class="head"><div><h1>Clientes</h1><p>Cadastro, inscrições e documentos de cada cliente.</p></div>
+    <div class="tools"><button class="btn" data-act="importar">Importar da planilha</button><button class="btn primary" data-act="novo-cli">Novo cliente</button></div></div>
+  <section class="panel">
+    <div class="panel-h"><input class="search" id="cli-q" type="search" placeholder="Buscar por nome, CNPJ ou CPF" value="${esc(cliFilter.q)}" aria-label="Buscar clientes">
+      <div class="seg" role="group" aria-label="Filtrar por tipo">${['todos',...TIPOS].map(t => `<button data-tipo="${esc(t)}" aria-pressed="${cliFilter.tipo===t}">${t==='todos'?'Todos':esc(t)}</button>`).join('')}</div></div>
+    ${loading('clientes') || (rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Cliente</th><th>CNPJ / CPF</th><th>Tipo</th><th>Situação</th><th class="r">Docs</th></tr></thead><tbody>
+      ${rows.map(c => `<tr class="click" data-cli="${c.id}"><td><div class="name">${esc(c.razao || '(sem razão social)')}${c.exemplo?'<span class="tag">EXEMPLO</span>':''}</div><div class="sub">${esc(c.responsavel||'')}</div></td><td class="mono">${esc(docId(c)) || '<span class="muted">—</span>'}</td><td>${esc(c.tipo||'')}</td><td>${pill(c.status||'ativo', STATUS_CLI)}</td><td class="r num">${(c.docs||[]).length}</td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="empty">${S.clientes.length ? 'Nenhum cliente encontrado com esse filtro.' : 'Nenhum cliente cadastrado ainda.'}</div>`)}
+  </section>`;
+}
+
+function vOrcamentos(){
+  let rows = S.orcamentos.filter(o => orcFilter === 'todos' || o.status === orcFilter);
+  rows = sortBy(rows, 'numero', -1);
+  return `${banner()}
+  <div class="head"><div><h1>Orçamentos</h1><p>Monte, envie e acompanhe até o pagamento.</p></div>
+    <button class="btn primary" data-act="novo-orc">Novo orçamento</button></div>
+  <section class="panel">
+    <div class="panel-h"><div class="seg" role="group" aria-label="Filtrar por situação">${['todos',...Object.keys(STATUS_ORC)].map(s => `<button data-st="${s}" aria-pressed="${orcFilter===s}">${s==='todos'?'Todos':STATUS_ORC[s].l}</button>`).join('')}</div></div>
+    ${loading('orcamentos') || (rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Nº</th><th>Cliente</th><th>Data</th><th>Validade</th><th>Situação</th><th class="r">Total</th></tr></thead><tbody>
+      ${rows.map(o => { const c = cliOf(o.clienteId); const venc = o.status==='enviado' && o.validade && o.validade < today(); return `<tr class="click" data-orc="${o.id}"><td class="mono">${esc(o.numero)}${o.exemplo?'<span class="tag">EXEMPLO</span>':''}</td><td><div class="name">${esc(c?.razao || o.clienteNome || 'Cliente removido')}</div><div class="sub">${(o.itens||[]).length} serviço${(o.itens||[]).length===1?'':'s'}</div></td><td class="mono">${fmtDate(o.data)}</td><td class="mono" ${venc?'style="color:var(--bad)"':''}>${fmtDate(o.validade)}</td><td>${pill(o.status, STATUS_ORC)}</td><td class="r num">${brl(total(o))}</td></tr>`; }).join('')}
+    </tbody></table></div>` : `<div class="empty">${S.orcamentos.length ? 'Nenhum orçamento nessa situação.' : 'Nenhum orçamento ainda.'}</div>`)}
+  </section>`;
+}
+
+function vServicos(){
+  const rows = sortBy([...S.servicos], 'nome');
+  return `${banner()}
+  <div class="head"><div><h1>Serviços</h1><p>Catálogo com preço padrão. No orçamento você ainda pode ajustar o valor.</p></div>
+    <button class="btn primary" data-act="novo-serv">Novo serviço</button></div>
+  <section class="panel">
+    ${loading('servicos') || (rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Serviço</th><th class="r">Preço padrão</th><th>Situação</th></tr></thead><tbody>
+    ${rows.map(s => `<tr class="click" data-serv="${s.id}"><td class="name">${esc(s.nome)}</td><td class="r num">${brl(s.preco)}</td><td>${s.ativo===false ? '<span class="pill">Fora do catálogo</span>' : '<span class="pill accent">Em uso</span>'}</td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="empty">Nenhum serviço cadastrado.<button class="btn primary" data-act="seed-serv">Adicionar os serviços padrão</button></div>`)}
+  </section>`;
+}
+
+function vAjustes(){
+  const e = S.empresa;
+  return `${banner()}
+  <div class="head"><div><h1>Ajustes</h1><p>Dados que saem no cabeçalho e nas condições do orçamento.</p></div></div>
+  <section class="panel" style="padding:18px">
+    <form id="f-emp"><fieldset>
+      <div class="f full"><label for="e-nome">Nome no orçamento</label><input id="e-nome" name="nome" value="${esc(e.nome)}"></div>
+      <div class="f full"><label for="e-contato">Contato (aparece abaixo do nome)</label><input id="e-contato" name="contato" value="${esc(e.contato)}" placeholder="Ex.: (31) 9xxxx-xxxx · seuemail@exemplo.com"></div>
+      <div class="f"><label for="e-pag">Forma de pagamento padrão</label><input id="e-pag" name="pagamento" value="${esc(e.pagamento)}"></div>
+      <div class="f"><label for="e-val">Validade padrão (dias)</label><input id="e-val" name="validade" type="number" min="1" value="${esc(e.validade)}"></div>
+      <div class="f full"><label for="e-portais">Portais da consulta rápida (um por linha: Nome | endereço)</label><textarea id="e-portais" name="portais" class="mono" style="min-height:150px;font-size:.82rem">${esc(e.portais || PORTAIS_PADRAO)}</textarea><span class="hint">O GISS Online muda de endereço conforme o município. Troque pelo da prefeitura dos seus clientes.</span></div>
+    </fieldset>
+    <fieldset style="margin-top:22px"><legend class="label">PIX para recebimento</legend>
+      <div class="f"><label for="e-pixtipo">Tipo da chave</label><select id="e-pixtipo" name="pixTipo">${Object.entries(PIX_TIPOS).map(([k,v]) => `<option value="${k}" ${(e.pixTipo||'cnpj')===k?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="f"><label for="e-pixchave">Chave PIX</label><input id="e-pixchave" name="pixChave" class="mono" value="${esc(e.pixChave||'')}" autocomplete="off"><span class="hint" id="h-pix"></span></div>
+      <div class="f"><label for="e-pixnome">Nome do recebedor (como está no banco)</label><input id="e-pixnome" name="pixNome" value="${esc(e.pixNome||'')}"><span class="hint">No QR Code saem só os primeiros 25 caracteres, sem acentos.</span></div>
+      <div class="f"><label for="e-pixcidade">Cidade do recebedor</label><input id="e-pixcidade" name="pixCidade" value="${esc(e.pixCidade||'')}" placeholder="Belo Horizonte"></div>
+      <div class="f full"><label for="e-pixbanco">Banco (opcional, aparece no orçamento)</label><input id="e-pixbanco" name="pixBanco" value="${esc(e.pixBanco||'')}" placeholder="Ex.: Banco Inter, Nubank"></div>
+    </fieldset>
+    ${pixConfig() ? `<div class="pixbox" style="margin-top:14px">${qrSVG(pixPayload({chave:pixConfig().chave, nome:pixConfig().nome, cidade:pixConfig().cidade, txid:'***'}), 120)}<div class="sub">QR Code de teste, sem valor. Escaneie no app do seu banco para conferir se aparece o seu nome antes de enviar orçamentos.</div></div>` : ''}
+    <div style="margin-top:14px"><button class="btn primary" type="submit">Salvar ajustes</button></div></form>
+  </section>
+  <section class="panel" style="display:flex;flex-direction:column">
+    <div style="padding:18px 18px 10px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2>Cofre de senhas</h2>${S.cofreMeta ? (vaultOpen() ? '<span class="vault-pill on">Aberto</span>' : '<span class="vault-pill off">Bloqueado</span>') : ''}</div>
+      <p class="muted" style="margin:0;max-width:68ch">Senhas gov.br, códigos de acesso do Simples e senhas municipais ficam criptografados no seu navegador antes de serem gravados. Sem a senha mestra ninguém consegue lê-los, nem quem tiver acesso ao banco de dados. O cofre bloqueia sozinho após ${VAULT_IDLE_MIN} minutos sem uso.</p>
+    </div>
+    ${!cryptoOk ? `<div class="lock">O cofre não funciona neste navegador.</div>`
+    : !S.cofreMeta ? `<div class="lock" style="flex-direction:column;align-items:stretch;gap:10px">
+        <div class="banner warn">A senha mestra não pode ser recuperada. Se você esquecê-la, as senhas guardadas se perdem e terão de ser cadastradas de novo. Use uma senha longa que você não usa em outro lugar.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="password" id="vault-new" autocomplete="new-password" placeholder="Nova senha mestra (mín. 10 caracteres)" aria-label="Nova senha mestra" style="max-width:none">
+        <input type="password" id="vault-new2" autocomplete="new-password" placeholder="Repita a senha mestra" aria-label="Repita a senha mestra" style="max-width:none">
+        <button class="btn primary" data-act="criar-cofre">Criar cofre</button></div></div>`
+    : vaultOpen() ? `<div class="lock"><span>${S.cofre.length} cliente${S.cofre.length === 1 ? '' : 's'} com acessos guardados.</span><button class="btn sm" data-act="lock">Bloquear agora</button></div>`
+    : lockBox()}
+  </section>
+  <section class="panel" style="padding:18px;display:flex;flex-direction:column;gap:10px">
+    <h2>Backup</h2>
+    <p class="muted" style="margin:0;max-width:68ch">Baixe uma cópia de todos os dados (clientes, orçamentos, serviços e o cofre, que continua criptografado). Os arquivos dos clientes ficam no Google Drive e não entram no backup.</p>
+    <div class="tools"><button class="btn" data-act="exportar-backup">Baixar backup</button><input type="file" id="bk-file" accept=".json,application/json" hidden><button class="btn" data-act="importar-backup" ${S.demo ? 'disabled' : ''}>Importar backup</button></div>
+  </section>`;
+}
+
+/* ---------- painel lateral ---------- */
+let sheet = null; // {kind, id, tab, draft}
+function closeSheet(){ sheet = null; $('#sheet-root').innerHTML = ''; }
+function openSheet(s){ sheet = s; drawSheet(); }
+function refreshSheet(col){
+  if (!sheet) return;
+  if (sheet.kind === 'cliente' && col === 'clientes' && sheet.tab === 'docs') drawSheet();
+}
+function drawSheet(){
+  const r = $('#sheet-root');
+  if (!sheet){ r.innerHTML = ''; return; }
+  const html = {cliente:shCliente, orc:shOrc, serv:shServ, importar:shImport}[sheet.kind]();
+  r.innerHTML = `<div class="scrim" data-act="fechar"></div><section class="sheet" role="dialog" aria-modal="true">${html}</section>`;
+  const first = $('.sheet input:not([type=hidden]), .sheet select', r); if (first && !sheet.noFocus) first.focus({preventScroll:true});
+  sheet.noFocus = false;
+}
+const closeBtn = `<button class="btn ghost sm" data-act="fechar" aria-label="Fechar">Fechar</button>`;
+
+/* Cliente */
+function shCliente(){
+  const c = sheet.id ? (cliOf(sheet.id) || {}) : (sheet.draft ||= {tipo:'ME / LTDA', status:'ativo', docs:[]});
+  const tab = sheet.tab || 'dados';
+  const orcs = sheet.id ? sortBy(S.orcamentos.filter(o => o.clienteId === sheet.id), 'numero', -1) : [];
+  const field = (id, label, val, extra='') => `<div class="f ${extra.includes('full')?'full':''}"><label for="c-${id}">${label}</label><input id="c-${id}" name="${id}" value="${esc(val)}" ${extra.replace('full','')}></div>`;
+  return `<div class="sheet-h"><div><span class="label">${sheet.id ? 'Cliente' : 'Novo cliente'}</span><h2>${esc(c.razao || c.responsavel || 'Cadastro')}</h2>${sheet.id?`<div class="sub mono">${esc(docId(c))}</div>`:''}</div>${closeBtn}</div>
+  ${sheet.id ? `<div class="tabs" role="tablist" style="padding:0 22px;background:var(--surface)">
+      <button role="tab" data-tab="dados" aria-selected="${tab==='dados'}">Dados</button>
+      <button role="tab" data-tab="acessos" aria-selected="${tab==='acessos'}">Acessos</button>
+      <button role="tab" data-tab="docs" aria-selected="${tab==='docs'}">Documentos (${(c.docs||[]).length})</button>
+      <button role="tab" data-tab="orcs" aria-selected="${tab==='orcs'}">Orçamentos (${orcs.length})</button></div>` : ''}
+  <div class="sheet-b">
+  ${tab === 'dados' ? `<form id="f-cli" novalidate>
+    <fieldset><legend class="label">Identificação</legend>
+      <div class="f"><label for="c-tipo">Tipo</label><select id="c-tipo" name="tipo">${TIPOS.map(t => `<option ${c.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="f"><label for="c-status">Situação</label><select id="c-status" name="status">${Object.entries(STATUS_CLI).map(([k,v]) => `<option value="${k}" ${(c.status||'ativo')===k?'selected':''}>${v.l}</option>`).join('')}</select></div>
+      ${field('razao','Nome empresarial', c.razao, 'full')}
+      ${field('responsavel','Responsável', c.responsavel, 'full')}
+      <div class="f"><label for="c-cnpj">CNPJ</label><input id="c-cnpj" name="cnpj" inputmode="numeric" value="${esc(c.cnpj ? maskCNPJ(c.cnpj) : '')}" data-mask="cnpj"><span class="hint" id="h-cnpj"></span></div>
+      <div class="f"><label for="c-cpf">CPF do responsável</label><input id="c-cpf" name="cpf" inputmode="numeric" value="${esc(c.cpf ? maskCPF(c.cpf) : '')}" data-mask="cpf"><span class="hint" id="h-cpf"></span></div>
+      <div class="f"><label for="c-nasc">Data de nascimento</label><input id="c-nasc" name="nascimento" type="date" value="${esc(c.nascimento||'')}"></div>
+    </fieldset>
+    <fieldset style="margin-top:18px"><legend class="label">Inscrições</legend>
+      ${field('ie','Inscrição Estadual', c.ie, 'inputmode="numeric"')}
+      ${field('im','Inscrição Municipal (GISS Online)', c.im, 'inputmode="numeric"')}
+      ${field('nire','NIRE', c.nire, 'inputmode="numeric"')}
+      <div class="f"><label for="c-cert">Certificado digital vence em</label><input id="c-cert" name="certVence" type="date" value="${esc(c.certVence||'')}"></div>
+    </fieldset>
+    <fieldset style="margin-top:18px"><legend class="label">Contato</legend>
+      <div class="f"><label for="c-tel">Telefone / WhatsApp</label><input id="c-tel" name="telefone" inputmode="tel" value="${esc(c.telefone||'')}" data-mask="tel"></div>
+      ${field('email','E-mail', c.email, 'type="email"')}
+      <div class="f full"><label for="c-obs">Observações</label><textarea id="c-obs" name="obs">${esc(c.obs||'')}</textarea></div>
+    </fieldset>
+    <p class="hint" style="margin:14px 0 0">Senhas e códigos de acesso não são guardados aqui.</p>
+  </form>` : ''}
+  ${tab === 'docs' ? docsTab(c) : ''}
+  ${tab === 'acessos' ? accTab(c) : ''}
+  ${tab === 'orcs' ? (orcs.length ? `<ul class="list-plain panel">${orcs.map(o => `<li class="click" data-orc="${o.id}"><span class="mono">nº ${esc(o.numero)} · ${fmtDate(o.data)}</span><span>${pill(o.status, STATUS_ORC)} <span class="num">${brl(total(o))}</span></span></li>`).join('')}</ul>` : `<div class="empty">Nenhum orçamento para este cliente.</div>`) + `<div><button class="btn primary" data-act="orc-cli">Novo orçamento para este cliente</button></div>` : ''}
+  </div>
+  ${tab === 'dados' ? `<div class="sheet-f">${sheet.id ? `<button class="btn danger" data-act="del-cli">Excluir cliente</button>` : '<span></span>'}<div class="tools"><button class="btn" data-act="fechar">Cancelar</button><button class="btn primary" data-act="salvar-cli">Salvar</button></div></div>` : ''}
+  ${tab === 'acessos' && vaultOpen() ? `<div class="sheet-f"><button class="btn ghost" data-act="lock">Bloquear cofre</button><div class="tools"><button class="btn" data-act="fechar">Cancelar</button><button class="btn primary" data-act="salvar-acc">Salvar acessos</button></div></div>` : ''}`;
+}
+function accTab(c){
+  if (!vaultOpen()) return `<div class="panel">${lockBox(temAcessos(c.id) ? 'Este cliente tem acessos guardados. Digite a senha mestra para editar.' : 'Digite a senha mestra para cadastrar os acessos deste cliente.')}</div>`;
+  const p = sheet.accDraft ||= JSON.parse(JSON.stringify(plain[c.id] || {outros:[]}));
+  p.outros ||= [];
+  const sec = (id, label, val, hint) => `<div class="f"><label for="a-${id}">${label}</label><input id="a-${id}" data-acc="${id}" type="password" autocomplete="new-password" class="mono" value="${esc(val || '')}">${hint ? `<span class="hint">${hint}</span>` : ''}</div>`;
+  return `<form id="f-acc" novalidate>
+    <fieldset><legend class="label">gov.br</legend>
+      <div class="f"><label>Login</label><input disabled class="mono" value="${esc(c.cpf ? maskCPF(c.cpf) : 'Cadastre o CPF na aba Dados')}"></div>
+      ${sec('govSenha', 'Senha gov.br', p.govSenha)}
+    </fieldset>
+    <fieldset style="margin-top:18px"><legend class="label">Simples Nacional</legend>
+      ${sec('codSimples', 'Código de acesso', p.codSimples, 'Código de 12 dígitos gerado no portal do Simples.')}
+    </fieldset>
+    <fieldset style="margin-top:18px"><legend class="label">GISS Online</legend>
+      <div class="f"><label>Usuário</label><input disabled class="mono" value="${esc(c.im || 'Cadastre a inscrição municipal')}"></div>
+      ${sec('gissSenha', 'Senha GISS', p.gissSenha)}
+    </fieldset>
+    <div style="margin-top:18px;display:flex;flex-direction:column;gap:10px"><span class="label">Outros acessos</span>
+      ${p.outros.map((o, i) => `<fieldset style="grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:end;gap:8px" data-outro="${i}">
+        <div class="f"><label for="o${i}-r">Nome</label><input id="o${i}-r" data-o-f="rotulo" value="${esc(o.rotulo || '')}" placeholder="Ex.: SIARE"></div>
+        <div class="f"><label for="o${i}-u">Usuário</label><input id="o${i}-u" data-o-f="usuario" class="mono" value="${esc(o.usuario || '')}"></div>
+        <div class="f"><label for="o${i}-s">Senha</label><input id="o${i}-s" data-o-f="senha" type="password" autocomplete="new-password" class="mono" value="${esc(o.senha || '')}"></div>
+        <button class="btn ghost sm" type="button" data-rm-outro="${i}" aria-label="Remover acesso">✕</button>
+        <div class="f full" style="grid-column:1/-1"><label for="o${i}-l">Endereço do portal (opcional)</label><input id="o${i}-l" data-o-f="url" value="${esc(o.url || '')}" placeholder="https://"></div>
+      </fieldset>`).join('')}
+      <div><button class="btn sm" type="button" data-act="add-outro">Adicionar outro acesso</button></div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:16px" class="sub"><input type="checkbox" id="a-ver" data-act="ver-senhas"> Mostrar senhas enquanto edito</label>
+  </form>`;
+}
+function readAccForm(){
+  const p = sheet.accDraft || {outros:[]};
+  $$('#f-acc [data-acc]').forEach(i => p[i.dataset.acc] = i.value.trim());
+  p.outros = $$('#f-acc [data-outro]').map(fs => { const o = {}; $$('[data-o-f]', fs).forEach(i => o[i.dataset.oF] = i.value.trim()); return o; });
+  return p;
+}
+function readCliForm(){
+  const f = $('#f-cli'); const o = Object.fromEntries(new FormData(f).entries());
+  o.cnpj = dig(o.cnpj); o.cpf = dig(o.cpf); o.telefone = dig(o.telefone);
+  for (const k of Object.keys(o)) o[k] = String(o[k]).trim();
+  return o;
+}
+async function saveCliente(){
+  const o = readCliForm();
+  if (!o.razao && !o.responsavel){ toast('Informe o nome empresarial ou o responsável.'); $('#c-razao').focus(); return; }
+  if (o.cnpj && !validCNPJ(o.cnpj)){ toast('O CNPJ não confere. Verifique os dígitos.'); $('#c-cnpj').focus(); return; }
+  if (o.cpf && !validCPF(o.cpf)){ toast('O CPF não confere. Verifique os dígitos.'); $('#c-cpf').focus(); return; }
+  const old = sheet.id ? cliOf(sheet.id) : null;
+  const id = sheet.id || uid();
+  const data = {...(old ? strip(old) : {docs:[], criadoEm: today()}), ...o, atualizadoEm: today()};
+  delete data.exemplo;
+  await put('clientes', id, data);
+  toast(sheet.id ? 'Cliente atualizado.' : 'Cliente cadastrado.');
+  sheet = {kind:'cliente', id, tab:'dados', noFocus:true}; drawSheet();
+}
+function docsTab(c){
+  const docs = sortBy([...(c.docs||[])], 'data', -1);
+  const pasta = c.driveFolderId ? `https://drive.google.com/drive/folders/${encodeURIComponent(c.driveFolderId)}` : '';
+  const estado = S.demo ? `<span class="hint" style="flex-basis:100%">No modo demonstração o envio de arquivos fica desligado.</span>`
+    : driveOn() ? `<span class="hint" style="flex-basis:100%">Os arquivos vão para a pasta deste cliente no seu Google Drive. Qualquer tipo de arquivo, até 25 MB. Também dá para arrastar para cá.</span>`
+    : `<span class="hint" style="flex-basis:100%">Conecte o Google Drive para enviar arquivos. A conexão vale por cerca de 1 hora; depois o sistema pede para reconectar.</span>`;
+  return `<div class="drop" id="drop">
+      <div class="f" style="flex:1;min-width:160px"><label for="d-cat">Categoria</label><select id="d-cat">${DOC_CATS.map(x => `<option>${x}</option>`).join('')}</select></div>
+      <div class="tools"><input type="file" id="d-file" multiple hidden>
+      ${S.demo ? `<button class="btn primary" disabled>Enviar arquivo</button>` : driveOn() ? `<button class="btn primary" data-act="upload">Enviar arquivo</button>` : `<button class="btn primary" data-act="conectar-drive">Conectar Google Drive</button>`}
+      ${pasta ? `<a class="btn" href="${pasta}" target="_blank" rel="noopener">Abrir pasta no Drive ↗</a>` : ''}</div>
+      ${estado}
+    </div>
+    ${docs.length ? `<div class="docs">${docs.map(d => { const ext = (d.nome.split('.').pop()||'').slice(0,4).toUpperCase(); const key = d.driveId || d.assetId;
+      return `<div class="doc"><span class="ico">${esc(ext)}</span><div class="meta">${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.nome)}</a>` : `<span>${esc(d.nome)}</span>`}<div class="sub">${esc(d.categoria)} · ${fmtDate(d.data)} · ${Math.max(1, Math.round((d.size||0)/1024))} KB</div></div><button class="btn sm danger" data-del-doc="${esc(key)}">Excluir</button></div>`; }).join('')}</div>`
+    : `<div class="empty">Nenhum documento guardado para este cliente.</div>`}`;
+}
+async function uploadFiles(files){
+  if (S.demo || !sheet?.id) return;
+  if (!driveOn()){ toast('Conecte o Google Drive antes de enviar.'); sheet.noFocus = true; drawSheet(); return; }
+  const c = cliOf(sheet.id); if (!c) return;
+  const cat = $('#d-cat')?.value || 'Outros';
+  const novos = [];
+  let folder;
+  try { toast('Preparando a pasta no Drive…'); folder = await pastaCliente(c); }
+  catch(e){ toast(e.code === 'drive-off' ? 'A conexão com o Drive expirou. Conecte de novo.' : 'Não foi possível criar a pasta no Drive.'); sheet.noFocus = true; drawSheet(); return; }
+  for (const file of files){
+    if (file.size > 25*1024*1024){ toast(`${file.name}: maior que 25 MB.`); continue; }
+    toast(`Enviando ${file.name}…`);
+    try {
+      const r = await enviarArquivo(file, folder, `${cat} · ${c.razao || c.responsavel}`);
+      novos.push({driveId:r.id, nome:r.name || file.name, categoria:cat, data:today(), size:Number(r.size) || file.size, tipo:r.mimeType || file.type, link:r.webViewLink || `https://drive.google.com/file/d/${r.id}/view`});
+    } catch(e){ toast(e.code === 'drive-off' ? 'A conexão com o Drive expirou. Conecte de novo e reenvie.' : `${file.name}: não foi enviado. Tente de novo.`); if (e.code === 'drive-off') break; }
+  }
+  if (novos.length){
+    const fresh = cliOf(sheet.id);
+    await put('clientes', sheet.id, {...strip(fresh), docs:[...(fresh.docs||[]), ...novos]});
+    toast(novos.length === 1 ? 'Documento guardado no Drive.' : `${novos.length} documentos guardados no Drive.`);
+  }
+  sheet.noFocus = true; drawSheet();
+}
+async function deleteDoc(key){
+  const c = cliOf(sheet.id); if (!c) return;
+  const d = (c.docs||[]).find(x => (x.driveId || x.assetId) === key);
+  if (d?.driveId){
+    try { await gapi(`${DRIVE}/files/${encodeURIComponent(d.driveId)}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({trashed:true})}); }
+    catch(e){ if (e.code === 'drive-off'){ toast('Conecte o Google Drive para excluir o arquivo.'); return; } if (e.code !== 'http-404'){ toast('Não foi possível excluir no Drive.'); return; } }
+  }
+  await put('clientes', sheet.id, {...strip(c), docs:(c.docs||[]).filter(x => (x.driveId || x.assetId) !== key)});
+  toast('Documento movido para a lixeira do Drive.');
+}
+function baixarArquivo(blob, filename){
+  const u = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = u; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 5000);
+}
+/* ---------- backup ---------- */
+async function exportarBackup(){
+  const out = {versao:1, exportadoEm:new Date().toISOString(), clientes:S.clientes, orcamentos:S.orcamentos, servicos:S.servicos, cofre:S.cofre, config:{empresa:S.empresa, cofre:S.cofreMeta}};
+  baixarArquivo(new Blob([JSON.stringify(out, null, 2)], {type:'application/json'}), `backup-sanzio-${today()}.json`);
+  toast('Backup baixado. Guarde em lugar seguro: ele tem os dados dos clientes.');
+}
+async function importarBackup(file){
+  let j; try { j = JSON.parse(await file.text()); } catch(e){ toast('Arquivo de backup inválido.'); return; }
+  const cols = ['clientes','orcamentos','servicos','cofre']; let n = 0;
+  if (j.config?.cofre && S.cofreMeta && j.config.cofre.salt !== S.cofreMeta.salt && (j.cofre||[]).length){
+    toast('Este sistema já tem um cofre com outra senha mestra. Os acessos do backup não foram importados.'); j.cofre = [];
+  }
+  for (const c of cols) for (const row of (j[c] || [])){ if (!row.id) continue; await put(c, row.id, strip(row)); n++; }
+  if (j.config?.empresa) await saveEmpresa(j.config.empresa);
+  if (j.config?.cofre && !S.cofreMeta){ await saveMeta('cofre', j.config.cofre); S.cofreMeta = j.config.cofre; }
+  toast(`${n} registros importados do backup.`);
+}
+
+/* Serviço */
+function shServ(){
+  const s = sheet.id ? (S.servicos.find(x => x.id === sheet.id) || {}) : {ativo:true};
+  return `<div class="sheet-h"><div><span class="label">${sheet.id?'Serviço':'Novo serviço'}</span><h2>${esc(s.nome || 'Serviço do catálogo')}</h2></div>${closeBtn}</div>
+  <div class="sheet-b"><form id="f-serv"><fieldset>
+    <div class="f full"><label for="s-nome">Nome do serviço</label><input id="s-nome" name="nome" value="${esc(s.nome||'')}"></div>
+    <div class="f"><label for="s-preco">Preço padrão (R$)</label><input id="s-preco" name="preco" inputmode="decimal" class="mono" value="${s.preco!=null ? money2(s.preco) : ''}"></div>
+    <div class="f"><label for="s-ativo">Situação</label><select id="s-ativo" name="ativo"><option value="1" ${s.ativo!==false?'selected':''}>Em uso no catálogo</option><option value="0" ${s.ativo===false?'selected':''}>Fora do catálogo</option></select></div>
+    <div class="f full"><label for="s-desc">Descrição (opcional, sai no orçamento)</label><textarea id="s-desc" name="descricao">${esc(s.descricao||'')}</textarea></div>
+  </fieldset></form></div>
+  <div class="sheet-f">${sheet.id ? `<button class="btn danger" data-act="del-serv">Excluir</button>` : '<span></span>'}<div class="tools"><button class="btn" data-act="fechar">Cancelar</button><button class="btn primary" data-act="salvar-serv">Salvar</button></div></div>`;
+}
+async function saveServ(){
+  const o = Object.fromEntries(new FormData($('#f-serv')).entries());
+  if (!o.nome.trim()){ toast('Dê um nome ao serviço.'); return; }
+  const data = {nome:o.nome.trim(), preco:toNum(o.preco), ativo:o.ativo==='1', descricao:o.descricao.trim()};
+  await put('servicos', sheet.id || uid(), data); toast('Serviço salvo.'); closeSheet();
+}
+
+/* Orçamento */
+function newDraft(clienteId=''){
+  return {numero: nextNumero(), clienteId, data: today(), validade: addDays(today(), S.empresa.validade||15), status:'rascunho',
+    itens:[], desconto:0, pagamento:S.empresa.pagamento||'', obs:''};
+}
+function shOrc(){
+  const d = sheet.draft;
+  const ativos = sortBy(S.servicos.filter(s => s.ativo !== false), 'nome');
+  const c = cliOf(d.clienteId);
+  const view = sheet.tab || (sheet.id ? 'previa' : 'editar');
+  return `<div class="sheet-h"><div><span class="label">Orçamento nº ${esc(d.numero)}</span><h2>${esc(c?.razao || c?.responsavel || 'Novo orçamento')}</h2><div style="margin-top:6px">${pill(d.status, STATUS_ORC)}</div></div>${closeBtn}</div>
+  <div class="tabs" role="tablist" style="padding:0 22px;background:var(--surface)">
+    <button role="tab" data-tab="editar" aria-selected="${view==='editar'}">Editar</button>
+    <button role="tab" data-tab="previa" aria-selected="${view==='previa'}">Prévia e envio</button></div>
+  <div class="sheet-b">
+  ${view === 'editar' ? `
+    <fieldset><legend class="label">Cliente e prazos</legend>
+      <div class="f full"><label for="o-cli">Cliente</label><select id="o-cli" data-o="clienteId"><option value="">Selecione…</option>${sortBy([...S.clientes],'razao').map(x => `<option value="${x.id}" ${x.id===d.clienteId?'selected':''}>${esc(x.razao || x.responsavel)}${docId(x)?' · '+esc(docId(x)):''}</option>`).join('')}</select></div>
+      <div class="f"><label for="o-data">Data</label><input id="o-data" type="date" data-o="data" value="${esc(d.data)}"></div>
+      <div class="f"><label for="o-val">Válido até</label><input id="o-val" type="date" data-o="validade" value="${esc(d.validade)}"></div>
+    </fieldset>
+    <div style="display:flex;flex-direction:column;gap:8px"><span class="label">Serviços</span>
+      <div class="items" id="items">${itemsHTML(d)}</div>
+      <div class="addrow"><select id="o-add" aria-label="Adicionar serviço do catálogo"><option value="">Adicionar serviço do catálogo…</option>${ativos.map(s => `<option value="${s.id}">${esc(s.nome)} · ${brl(s.preco)}</option>`).join('')}</select>
+      <button class="btn" data-act="item-livre">Item avulso</button></div>
+      <div class="totals" id="totals">${totalsHTML(d)}</div>
+    </div>
+    <fieldset><legend class="label">Condições</legend>
+      <div class="f"><label for="o-desc">Desconto (R$)</label><input id="o-desc" inputmode="decimal" class="mono" data-o="desconto" value="${d.desconto ? money2(d.desconto) : ''}" placeholder="0,00"></div>
+      <div class="f"><label for="o-pag">Forma de pagamento</label><input id="o-pag" data-o="pagamento" value="${esc(d.pagamento)}"></div>
+      <div class="f full"><label for="o-obs">Observações</label><textarea id="o-obs" data-o="obs" placeholder="Ex.: documentos que o cliente precisa enviar, prazo de execução">${esc(d.obs)}</textarea></div>
+      <label class="pix-toggle full" style="grid-column:1/-1"><input type="checkbox" id="o-pix" ${d.semPix ? '' : 'checked'} ${pixConfig() ? '' : 'disabled'}> Incluir PIX e QR Code com o valor do orçamento ${pixConfig() ? '' : '<span class="hint">(cadastre a chave em Ajustes)</span>'}</label>
+    </fieldset>` : previewHTML(d)}
+    ${view === 'previa' ? `<div style="display:flex;flex-direction:column;gap:8px"><span class="label">Situação</span>
+      <div class="status-row">${Object.entries(STATUS_ORC).map(([k,v]) => `<button data-set-st="${k}" aria-pressed="${d.status===k}">${v.l}</button>`).join('')}</div>
+      <span class="hint">Mudar a situação salva o orçamento.</span></div>` : ''}
+  </div>
+  <div class="sheet-f">${sheet.id ? `<button class="btn danger" data-act="del-orc">Excluir</button>` : '<span></span>'}
+    <div class="tools">${view==='previa' ? `${pixDoOrc(d) ? `<button class="btn" data-act="copiar-pix">Copiar PIX copia e cola</button>` : ''}<button class="btn" data-act="copiar-msg">Copiar mensagem</button>${c?.telefone ? `<a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${dig(c.telefone)}?text=${encodeURIComponent(msgText(d))}">Abrir no WhatsApp</a>` : ''}<button class="btn primary" data-act="pdf" ${window.jspdf ? '' : 'disabled title="Gerador de PDF não carregou"'}>Baixar PDF</button>` : `<button class="btn" data-act="fechar">Cancelar</button><button class="btn primary" data-act="salvar-orc">Salvar</button>`}</div></div>`;
+}
+function itemsHTML(d){
+  if (!d.itens.length) return `<div class="empty" style="padding:18px">Adicione serviços do catálogo ou um item avulso.</div>`;
+  return `<div class="item item-h"><span>Descrição</span><span style="text-align:right">Qtd</span><span style="text-align:right">Unit. (R$)</span><span class="ht" style="text-align:right">Total</span><span></span></div>` +
+  d.itens.map((it,i) => `<div class="item" data-i="${i}">
+    <input aria-label="Descrição do item ${i+1}" data-it="nome" value="${esc(it.nome)}">
+    <input class="q" aria-label="Quantidade" inputmode="numeric" data-it="qtd" value="${esc(it.qtd)}">
+    <input class="p" aria-label="Valor unitário" inputmode="decimal" data-it="preco" value="${money2(it.preco)}">
+    <span class="t" data-t="${i}">${brl(toNum(it.qtd)*toNum(it.preco))}</span>
+    <button class="btn ghost sm" data-rm="${i}" aria-label="Remover item">✕</button></div>`).join('');
+}
+function totalsHTML(d){
+  return `<div><span class="muted">Subtotal</span><span>${brl(subtotal(d))}</span></div>
+    ${toNum(d.desconto) ? `<div><span class="muted">Desconto</span><span>− ${brl(d.desconto)}</span></div>` : ''}
+    <div class="grand"><span>Total</span><span>${brl(total(d))}</span></div>`;
+}
+function previewHTML(d){
+  const c = cliOf(d.clienteId) || {}; const e = S.empresa;
+  return `<div class="paper">
+    <div class="ph"><div><b>${esc((e.nome||'').toUpperCase())}</b>${e.contato?`<div class="small">${esc(e.contato)}</div>`:''}</div>
+      <div style="text-align:right"><div style="font-weight:600">Orçamento nº ${esc(d.numero)}</div><div class="small">Emitido em ${fmtDate(d.data)} · válido até ${fmtDate(d.validade)}</div></div></div>
+    <div><div class="small">Cliente</div><div style="font-weight:600">${esc(c.razao || c.responsavel || 'Selecione o cliente na aba Editar')}</div>
+      <div class="small">${[docId(c) && (c.cnpj?'CNPJ ':'CPF ')+docId(c), c.razao && c.responsavel ? 'A/C '+c.responsavel : ''].filter(Boolean).map(esc).join(' · ')}</div></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Serviço</th><th class="r">Qtd</th><th class="r">Unitário</th><th class="r">Total</th></tr></thead><tbody>
+      ${d.itens.map(i => `<tr><td>${esc(i.nome)}</td><td class="r mono">${esc(i.qtd)}</td><td class="r mono">${brl(i.preco)}</td><td class="r mono">${brl(toNum(i.qtd)*toNum(i.preco))}</td></tr>`).join('') || `<tr><td colspan="4" class="small">Nenhum serviço adicionado.</td></tr>`}
+    </tbody></table></div>
+    ${toNum(d.desconto) ? `<div class="tot" style="font-weight:400;font-size:.86rem"><span>Desconto</span><span class="mono">− ${brl(d.desconto)}</span></div>` : ''}
+    <div class="tot"><span>Valor total</span><span class="mono">${brl(total(d))}</span></div>
+    ${d.pagamento ? `<div class="small"><b>Pagamento:</b> ${esc(d.pagamento)}</div>` : ''}
+    ${d.obs ? `<div class="small" style="white-space:pre-wrap"><b>Observações:</b> ${esc(d.obs)}</div>` : ''}
+    ${pixHTML(d)}
+  </div>
+  ${!pixConfig() ? `<div class="banner">Cadastre sua chave PIX em <a href="#ajustes" data-act="fechar">Ajustes</a> para o QR Code sair no orçamento.</div>` : ''}`;
+}
+function pixHTML(d){
+  const px = pixDoOrc(d); if (!px) return '';
+  return `<div class="pix">
+    <div class="pix-qr">${qrSVG(px.codigo, 132) || '<div class="small">QR Code indisponível</div>'}</div>
+    <div class="pix-info">
+      <div style="font-weight:600;color:#1F6F5C">Pague com PIX</div>
+      <div class="small">Abra o app do banco, escolha PIX › Ler QR Code. O valor de <b>${brl(px.valor)}</b> já vem preenchido.</div>
+      <dl><dt>Chave (${esc(pixTipoLabel(px.tipo))})</dt><dd class="mono">${esc(px.chaveExibida)}</dd>
+      <dt>Favorecido</dt><dd>${esc(px.titular)}</dd>
+      ${px.banco ? `<dt>Banco</dt><dd>${esc(px.banco)}</dd>` : ''}</dl>
+      <div class="small">PIX copia e cola</div>
+      <div class="pix-code mono">${esc(px.codigo)}</div>
+    </div></div>`;
+}
+function msgText(d){
+  const c = cliOf(d.clienteId) || {}; const nome = (c.responsavel || c.razao || '').split(' ')[0];
+  const linhas = d.itens.map(i => `• ${i.nome}${toNum(i.qtd)>1 ? ` (${i.qtd}x)` : ''}: ${brl(toNum(i.qtd)*toNum(i.preco))}`);
+  return [`Olá${nome ? ', ' + nome : ''}! Segue o orçamento nº ${d.numero} da ${S.empresa.nome}:`, '', ...linhas,
+    ...(toNum(d.desconto) ? [`Desconto: − ${brl(d.desconto)}`] : []), '', `*Total: ${brl(total(d))}*`,
+    `Válido até ${fmtDate(d.validade)}.`, ...(d.pagamento ? [`Pagamento: ${d.pagamento}.`] : []), ...(d.obs ? ['', d.obs] : []),
+    ...pixMsg(d), '', 'Qualquer dúvida, estou à disposição.'].join('\n');
+}
+function pixMsg(d){
+  const px = pixDoOrc(d); if (!px) return [];
+  return ['', '*Pagamento via PIX*', `Chave (${pixTipoLabel(px.tipo)}): ${px.chaveExibida}`, `Favorecido: ${px.titular}${px.banco ? ' · ' + px.banco : ''}`,
+    '', 'PIX copia e cola (já vem com o valor):', px.codigo];
+}
+function updateTotals(){ const d = sheet.draft; d.itens.forEach((it,i) => { const t = $(`[data-t="${i}"]`); if (t) t.textContent = brl(toNum(it.qtd)*toNum(it.preco)); }); const t = $('#totals'); if (t) t.innerHTML = totalsHTML(d); }
+async function saveOrc(silent){
+  const d = sheet.draft;
+  if (!d.clienteId){ toast('Escolha o cliente.'); sheet.tab='editar'; drawSheet(); return false; }
+  if (!d.itens.length){ toast('Adicione pelo menos um serviço.'); sheet.tab='editar'; drawSheet(); return false; }
+  const id = sheet.id || uid();
+  const c = cliOf(d.clienteId);
+  const data = {...d, clienteNome: c?.razao || c?.responsavel || '', itens: d.itens.map(i => ({nome:String(i.nome).trim(), qtd:toNum(i.qtd)||1, preco:toNum(i.preco), ...(i.servicoId?{servicoId:i.servicoId}:{})})), desconto: toNum(d.desconto)};
+  delete data.id; delete data.exemplo;
+  await put('orcamentos', id, data);
+  sheet.id = id; sheet.draft = {...data};
+  if (!silent) toast('Orçamento salvo.');
+  return true;
+}
+function gerarPDF(d){
+  const {jsPDF} = window.jspdf; const doc = new jsPDF({unit:'mm', format:'a4'});
+  const c = cliOf(d.clienteId) || {}; const e = S.empresa;
+  const M = 18, W = 210, R = W - M; let y = 22;
+  const green = [31,111,92], grey = [95,108,102];
+  doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor(...green); doc.text((e.nome||'').toUpperCase(), M, y);
+  doc.setFontSize(11); doc.setTextColor(20,30,26); doc.text(`Orçamento nº ${d.numero}`, R, y, {align:'right'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...grey);
+  if (e.contato) doc.text(e.contato, M, y+5);
+  doc.text(`Emitido em ${fmtDate(d.data)}  ·  válido até ${fmtDate(d.validade)}`, R, y+5, {align:'right'});
+  y += 10; doc.setDrawColor(...green); doc.setLineWidth(0.6); doc.line(M, y, R, y);
+  y += 8; doc.setFontSize(8); doc.text('CLIENTE', M, y);
+  y += 5; doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(20,30,26); doc.text(c.razao || c.responsavel || '', M, y);
+  const sub = [docId(c) && (c.cnpj?'CNPJ ':'CPF ')+docId(c), c.razao && c.responsavel ? 'A/C '+c.responsavel : ''].filter(Boolean).join('  ·  ');
+  if (sub){ y += 5; doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...grey); doc.text(sub, M, y); }
+  y += 10;
+  const cQ = 128, cU = 158, cT = R;
+  doc.setFillColor(218,237,230); doc.rect(M, y-5, R-M, 8, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(20,30,26);
+  doc.text('Serviço', M+2, y); doc.text('Qtd', cQ, y, {align:'right'}); doc.text('Unitário', cU, y, {align:'right'}); doc.text('Total', cT-2, y, {align:'right'});
+  y += 8; doc.setFont('helvetica','normal');
+  d.itens.forEach(it => {
+    const lines = doc.splitTextToSize(String(it.nome), cQ - M - 16);
+    if (y + lines.length*4.5 > 260){ doc.addPage(); y = 22; }
+    doc.text(lines, M+2, y); doc.text(String(it.qtd), cQ, y, {align:'right'}); doc.text(brl(it.preco), cU, y, {align:'right'}); doc.text(brl(toNum(it.qtd)*toNum(it.preco)), cT-2, y, {align:'right'});
+    y += lines.length*4.5 + 2.5; doc.setDrawColor(225,231,228); doc.setLineWidth(0.2); doc.line(M, y-3.5, R, y-3.5);
+  });
+  y += 3;
+  if (toNum(d.desconto)){ doc.setTextColor(...grey); doc.text('Subtotal', cU, y, {align:'right'}); doc.text(brl(subtotal(d)), cT-2, y, {align:'right'}); y += 5; doc.text('Desconto', cU, y, {align:'right'}); doc.text('- ' + brl(d.desconto), cT-2, y, {align:'right'}); y += 6; }
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...green);
+  doc.text('Valor total', cU, y+1, {align:'right'}); doc.text(brl(total(d)), cT-2, y+1, {align:'right'});
+  y += 14; doc.setFontSize(9); doc.setTextColor(20,30,26);
+  if (d.pagamento){ doc.setFont('helvetica','bold'); doc.text('Pagamento:', M, y); doc.setFont('helvetica','normal'); doc.text(d.pagamento, M+20, y); y += 6; }
+  if (d.obs){ doc.setFont('helvetica','bold'); doc.text('Observações:', M, y); doc.setFont('helvetica','normal'); const l = doc.splitTextToSize(d.obs, R-M); doc.text(l, M, y+5); y += 5 + l.length*4.5; }
+  const px = pixDoOrc(d), mtx = px && qrMatrix(px.codigo);
+  if (px && mtx){
+    const qs = 42, boxH = 54;
+    if (y + boxH + 6 > 280){ doc.addPage(); y = 22; }
+    y += 4;
+    doc.setDrawColor(203,214,209); doc.setFillColor(246,250,248); doc.setLineWidth(0.3); doc.roundedRect(M, y, R-M, boxH, 2, 2, 'FD');
+    const n = mtx.length, cell = qs / n, qx = M + 6, qy = y + 6;
+    doc.setFillColor(255,255,255); doc.rect(qx-1.5, qy-1.5, qs+3, qs+3, 'F');
+    doc.setFillColor(0,0,0);
+    mtx.forEach((row, r) => { let c = 0; while (c < n){ if (row[c]){ let e = c; while (e < n && row[e]) e++; doc.rect(qx + c*cell, qy + r*cell, (e-c)*cell + 0.01, cell + 0.01, 'F'); c = e; } else c++; } });
+    const tx = qx + qs + 8, tw = R - tx - 4; let ty = y + 10;
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...green); doc.text('Pague com PIX', tx, ty);
+    ty += 5.5; doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...grey);
+    doc.text(`Leia o QR Code no app do banco. O valor de ${brl(px.valor)} já vem preenchido.`, tx, ty);
+    ty += 6; doc.setTextColor(20,30,26); doc.setFontSize(9);
+    const lin = [[`Chave (${pixTipoLabel(px.tipo)})`, px.chaveExibida], ['Favorecido', px.titular], ...(px.banco ? [['Banco', px.banco]] : [])];
+    lin.forEach(([k, v]) => { doc.setFont('helvetica','bold'); doc.text(k + ':', tx, ty); doc.setFont('helvetica','normal'); doc.text(String(v), tx + 32, ty); ty += 4.6; });
+    ty += 1.5; doc.setFontSize(7); doc.setTextColor(...grey); doc.text('PIX copia e cola:', tx, ty); ty += 3.4;
+    doc.setFont('courier','normal'); doc.setFontSize(6.3); doc.setTextColor(20,30,26);
+    const cl = doc.splitTextToSize(px.codigo, tw); doc.text(cl.slice(0, 5), tx, ty);
+    doc.setFont('helvetica','normal'); y += boxH + 4;
+  }
+  doc.setFontSize(8); doc.setTextColor(...grey); doc.text(`${e.nome} · Orçamento nº ${d.numero}`, M, 287);
+  return doc.output('blob');
+}
+
+/* Importação */
+function parseCSV(text){
+  const sep = (text.split('\n')[0].match(/;/g)||[]).length > (text.split('\n')[0].match(/,/g)||[]).length ? ';' : (text.includes('\t') ? '\t' : ',');
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i=0;i<text.length;i++){ const ch = text[i];
+    if (q){ if (ch === '"' && text[i+1] === '"'){ cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
+    else if (ch === '"') q = true; else if (ch === sep){ row.push(cur); cur=''; } else if (ch === '\n'){ row.push(cur); rows.push(row); row=[]; cur=''; } else if (ch !== '\r') cur += ch; }
+  if (cur || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+const COLMAP = h => { const n = norm(h);
+  if (/senha\s*gov|gov.*senha/.test(n)) return '__acc:govSenha';
+  if (/cod.*acesso|codigo.*acesso/.test(n)) return '__acc:codSimples';
+  if (/senha|password/.test(n)) return '__acc:gissSenha';
+  if (n.includes('nome empresarial') || n.includes('razao')) return 'razao';
+  if (n === 'nome' || n.includes('responsavel')) return 'responsavel';
+  if (n.includes('cnpj')) return 'cnpj'; if (n === 'cpf' || n.includes('cpf')) return 'cpf';
+  if (n.includes('estadual')) return 'ie'; if (n.includes('giss') || n.includes('municipal')) return 'im';
+  if (n.includes('nire')) return 'nire'; if (n.includes('nascimento')) return 'nascimento';
+  if (n.includes('telefone') || n.includes('whats') || n.includes('celular')) return 'telefone'; if (n.includes('mail')) return 'email';
+  return null; };
+function toISO(v){ const m = String(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : ''; }
+function guessTipo(c){ if (!c.cnpj) return 'Pessoa física'; if (/ltda|s\/?a\b|eireli/i.test(c.razao)) return 'ME / LTDA'; if (/^\d{2}\.?\d{3}\.?\d{3}/.test(c.razao) || /^\d{3}\.\d{3}\.\d{3}-\d{2}/.test(c.razao)) return 'MEI'; return 'ME / LTDA'; }
+function shImport(){
+  const p = sheet.preview;
+  const accNote = !p || !p.accCols.length ? '' : vaultOpen()
+    ? `<div class="banner">As senhas de ${p.comAcesso} cliente${p.comAcesso===1?'':'s'} vão direto para o cofre criptografado (colunas ${p.accCols.map(esc).join(', ')}).</div>`
+    : `<div class="banner warn">O cofre está bloqueado, então as colunas ${p.accCols.map(esc).join(', ')} serão descartadas. Para levar as senhas junto, desbloqueie o cofre abaixo antes de importar.</div>${S.cofreMeta ? `<div class="panel">${lockBox('Senha mestra do cofre')}</div>` : `<div class="sub">Crie o cofre em Ajustes se quiser importar as senhas.</div>`}`;
+  return `<div class="sheet-h"><div><span class="label">Importar</span><h2>Clientes da planilha</h2></div>${closeBtn}</div>
+  <div class="sheet-b">
+    <ol class="muted" style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+      <li>No Google Planilhas, abra a aba <b>Dados de clientes</b>.</li>
+      <li>Arquivo › Fazer download › <b>Valores separados por vírgula (.csv)</b>.</li>
+      <li>Escolha o arquivo abaixo e confira a prévia antes de importar.</li></ol>
+    <div class="banner">Com o cofre aberto, as colunas de senha e código de acesso vão criptografadas para o cofre. Com ele bloqueado, são descartadas.</div>
+    <div><input type="file" id="imp-file" accept=".csv,text/csv,text/plain" hidden><button class="btn primary" data-act="imp-escolher">${p ? 'Escolher outro arquivo' : 'Escolher arquivo .csv'}</button></div>
+    ${accNote}
+    ${p ? `<div class="panel"><div class="panel-h"><h3>${p.novos.length} cliente${p.novos.length===1?'':'s'} novo${p.novos.length===1?'':'s'}</h3><span class="sub">${p.dup} já cadastrado${p.dup===1?'':'s'}${vaultOpen() && p.accOnly.length ? `, ${p.accOnly.length} com senhas a completar no cofre` : ''}</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Nome empresarial</th><th>CNPJ / CPF</th><th>Tipo</th><th>Acessos</th></tr></thead><tbody>
+      ${p.novos.map(c => `<tr><td><div class="name">${esc(c.razao||c.responsavel)}</div><div class="sub">${esc(c.responsavel||'')}</div></td><td class="mono">${esc(docId(c))}${(c.cnpj && !validCNPJ(c.cnpj)) || (c.cpf && !validCPF(c.cpf)) ? ' <span class="pill bad">conferir</span>' : ''}</td><td>${esc(c.tipo)}</td><td>${c.__acc && vaultOpen() ? `<span class="pill ok">${Object.keys(c.__acc).length} no cofre</span>` : '<span class="muted">—</span>'}</td></tr>`).join('') || `<tr><td colspan="4" class="sub">Todos os clientes do arquivo já estão cadastrados.</td></tr>`}
+      </tbody></table></div></div>` : ''}
+  </div>
+  <div class="sheet-f"><span></span><div class="tools"><button class="btn" data-act="fechar">Cancelar</button><button class="btn primary" data-act="imp-confirmar" ${p && (p.novos.length || (vaultOpen() && p.accOnly.length)) ? '' : 'disabled'}>Importar</button></div></div>`;
+}
+const ACC_NOMES = {govSenha:'Senha gov.br', codSimples:'Código de acesso', gissSenha:'Senha GISS'};
+async function readImport(file){ sheet.rawText = await file.text(); buildImportPreview(); }
+function buildImportPreview(){
+  const rows = parseCSV(sheet.rawText || '');
+  if (rows.length < 2){ toast('O arquivo não tem linhas de clientes.'); return; }
+  const head = rows[0]; const map = head.map(COLMAP);
+  if (!map.includes('razao') && !map.includes('responsavel')){ toast('Não encontrei as colunas de nome. Exporte a aba Dados de clientes.'); return; }
+  const accCols = head.filter((h,i) => String(map[i]||'').startsWith('__acc:') && h.trim());
+  const porChave = new Map(); S.clientes.forEach(c => { if (c.cnpj) porChave.set(dig(c.cnpj), c.id); if (c.cpf && !c.cnpj) porChave.set(dig(c.cpf), c.id); });
+  let dup = 0, comAcesso = 0; const novos = [], accOnly = [];
+  for (const r of rows.slice(1)){
+    const c = {}, acc = {};
+    map.forEach((k,i) => { const v = String(r[i]??'').trim().replace(/'$/,''); if (!k || !v) return; if (k.startsWith('__acc:')) acc[k.slice(6)] = v; else c[k] = v; });
+    if (!c.razao && !c.responsavel) continue;
+    c.cnpj = dig(c.cnpj); c.cpf = dig(c.cpf); c.telefone = dig(c.telefone);
+    if (c.cnpj.length && c.cnpj.length < 14) c.cnpj = c.cnpj.padStart(14,'0');
+    if (c.cpf.length && c.cpf.length < 11) c.cpf = c.cpf.padStart(11,'0');
+    if (c.nascimento) c.nascimento = toISO(c.nascimento);
+    const razaoOrig = c.razao || c.responsavel;
+    if (!c.razao) c.razao = c.responsavel;
+    c.razao = c.razao.replace(/^\d{2}\.\d{3}\.\d{3}\s*-?\s*/, '').replace(/^\d{3}\.\d{3}\.\d{3}-\d{2}\s*-\s*/, '').trim() || c.razao;
+    const temAcc = Object.keys(acc).length > 0;
+    const key = c.cnpj || c.cpf;
+    if (key && porChave.has(key)){ dup++; if (temAcc){ accOnly.push({id: porChave.get(key), acc}); comAcesso++; } continue; }
+    c.tipo = guessTipo({...c, razao: razaoOrig}); c.status = 'ativo'; c.docs = []; c.criadoEm = today();
+    if (temAcc){ c.__acc = acc; comAcesso++; }
+    if (key) porChave.set(key, '__novo');
+    novos.push(c);
+  }
+  sheet.preview = {novos, dup, accCols, accOnly, comAcesso}; sheet.noFocus = true; drawSheet();
+}
+async function confirmImport(){
+  const p = sheet.preview; if (!p) return;
+  let nAcc = 0;
+  for (const c of p.novos){
+    const id = uid(); const acc = c.__acc; const data = {...c}; delete data.__acc;
+    await put('clientes', id, data);
+    if (acc && vaultOpen()){ await salvarAcessos(id, {...acc, outros:[]}); nAcc++; }
+  }
+  if (vaultOpen()) for (const {id, acc} of p.accOnly){
+    const atual = plain[id] || {outros:[]}; const merged = {...atual};
+    for (const [k,v] of Object.entries(acc)) if (!merged[k]) merged[k] = v;
+    await salvarAcessos(id, merged); nAcc++;
+  }
+  toast(`${p.novos.length} cliente${p.novos.length===1?'':'s'} importado${p.novos.length===1?'':'s'}${nAcc ? `, ${nAcc} com acessos no cofre` : ''}.`);
+  closeSheet(); location.hash = 'consulta';
+}
+
+/* ---------- eventos ---------- */
+const armed = new WeakSet();
+function confirmClick(btn, label){ if (armed.has(btn)) return true; armed.add(btn); btn.classList.add('armed'); const old = btn.textContent; btn.textContent = label || 'Confirmar exclusão'; setTimeout(() => { armed.delete(btn); btn.classList.remove('armed'); btn.textContent = old; }, 3500); return false; }
+
+document.addEventListener('click', async ev => {
+  const t = ev.target.closest('button, a, tr, li'); if (!t) return;
+  const a = t.dataset.act;
+  if (t.dataset.copy){ copyText(valueOf(t.dataset.cid, t.dataset.copy), t, t.dataset.copy.startsWith('acc.') && !t.dataset.copy.endsWith('usuario')); return; }
+  if (t.dataset.show){ const k = t.dataset.cid + '|' + t.dataset.show; shown.has(k) ? shown.delete(k) : shown.add(k); render(); return; }
+  if (t.dataset.cq){ cq.sel = t.dataset.cq; cq.idx = cqMatches().findIndex(c => c.id === cq.sel); shown.clear(); render(); return; }
+  if (t.dataset.rmOutro != null){ readAccForm(); sheet.accDraft.outros.splice(+t.dataset.rmOutro, 1); sheet.noFocus = true; drawSheet(); return; }
+  if (a === 'unlock'){ await tryUnlock(t.closest('.lock')?.querySelector('input'), t); return; }
+  if (t.dataset.cli){ ev.preventDefault(); openSheet({kind:'cliente', id:t.dataset.cli, tab:'dados'}); return; }
+  if (t.dataset.orc){ ev.preventDefault(); const o = S.orcamentos.find(x => x.id === t.dataset.orc); if (o) openSheet({kind:'orc', id:o.id, draft: JSON.parse(JSON.stringify(strip(o))), tab:'previa'}); return; }
+  if (t.dataset.serv){ openSheet({kind:'serv', id:t.dataset.serv}); return; }
+  if (t.dataset.tipo){ cliFilter.tipo = t.dataset.tipo; render(); return; }
+  if (t.dataset.st){ orcFilter = t.dataset.st; render(); return; }
+  if (t.dataset.tab){ if (sheet.kind === 'orc') syncDraft(); if ($('#f-acc')) readAccForm(); sheet.tab = t.dataset.tab; sheet.noFocus = true; drawSheet(); return; }
+  if (t.dataset.rm != null){ sheet.draft.itens.splice(+t.dataset.rm, 1); $('#items').innerHTML = itemsHTML(sheet.draft); updateTotals(); return; }
+  if (t.dataset.setSt){ const d = sheet.draft; const st = t.dataset.setSt; d.status = st;
+    if (st === 'enviado' && !d.enviadoEm) d.enviadoEm = today(); if (st === 'pago') d.pagoEm = d.pagoEm || today(); if (st !== 'pago') delete d.pagoEm;
+    if (await saveOrc(true)){ toast(`Situação: ${STATUS_ORC[st].l}.`); sheet.noFocus = true; drawSheet(); } return; }
+  if (t.dataset.delDoc){ if (!confirmClick(t, 'Confirmar')) return; await deleteDoc(t.dataset.delDoc); return; }
+  switch (a){
+    case 'fechar': closeSheet(); break;
+    case 'novo-cli': openSheet({kind:'cliente', id:null, tab:'dados'}); break;
+    case 'novo-orc': openSheet({kind:'orc', id:null, draft:newDraft(), tab:'editar'}); break;
+    case 'orc-cli': openSheet({kind:'orc', id:null, draft:newDraft(sheet.id), tab:'editar'}); break;
+    case 'novo-serv': openSheet({kind:'serv', id:null}); break;
+    case 'importar': openSheet({kind:'importar'}); break;
+    case 'salvar-cli': await saveCliente(); break;
+    case 'del-cli': if (!confirmClick(t)) return; { const id = sheet.id; await remove('clientes', id); if (temAcessos(id)) await remove('cofre', id); delete plain[id]; } toast('Cliente excluído.'); closeSheet(); break;
+    case 'lock': bloquear(); toast('Cofre bloqueado.'); break;
+    case 'conectar-drive': await conectarDrive(); break;
+    case 'exportar-backup': await exportarBackup(); break;
+    case 'importar-backup': $('#bk-file').click(); break;
+    case 'seed-serv': for (const sv of SERVICOS_PADRAO) await put('servicos', sv.id, strip(sv)); toast('Serviços padrão adicionados.'); break;
+    case 'edit-acc': openSheet({kind:'cliente', id:t.dataset.cid, tab:'acessos'}); break;
+    case 'add-outro': readAccForm(); sheet.accDraft.outros.push({rotulo:'', usuario:'', senha:'', url:''}); sheet.noFocus = true; drawSheet(); $$('[data-o-f="rotulo"]').pop()?.focus(); break;
+    case 'salvar-acc': {
+      const p = readAccForm(); p.outros = p.outros.filter(o => o.rotulo || o.usuario || o.senha);
+      for (const o of p.outros) if (o.url && !/^https:\/\//.test(o.url)) o.url = /^[\w.-]+\.[a-z]{2,}/i.test(o.url) ? 'https://' + o.url : '';
+      try { await salvarAcessos(sheet.id, p); sheet.accDraft = null; toast('Acessos guardados no cofre.'); render(); sheet.noFocus = true; drawSheet(); }
+      catch(e){ toast(e.message === 'locked' ? 'O cofre foi bloqueado. Desbloqueie e salve de novo.' : 'Não foi possível salvar os acessos.'); }
+      break; }
+    case 'criar-cofre': {
+      const p1 = $('#vault-new')?.value || '', p2 = $('#vault-new2')?.value || '';
+      if (p1.length < 10){ toast('Use pelo menos 10 caracteres na senha mestra.'); return; }
+      if (p1 !== p2){ toast('As duas senhas não são iguais.'); return; }
+      t.disabled = true; t.textContent = 'Criando…';
+      try { await criarCofre(p1); toast('Cofre criado e aberto.'); } catch(e){ toast('Não foi possível criar o cofre.'); t.disabled = false; t.textContent = 'Criar cofre'; }
+      break; }
+    case 'salvar-serv': await saveServ(); break;
+    case 'del-serv': if (!confirmClick(t)) return; await remove('servicos', sheet.id); toast('Serviço excluído.'); closeSheet(); break;
+    case 'salvar-orc': syncDraft(); if (await saveOrc()){ sheet.tab = 'previa'; sheet.noFocus = true; drawSheet(); } break;
+    case 'del-orc': if (!confirmClick(t)) return; await remove('orcamentos', sheet.id); toast('Orçamento excluído.'); closeSheet(); break;
+    case 'item-livre': syncDraft(); sheet.draft.itens.push({nome:'', qtd:1, preco:0}); $('#items').innerHTML = itemsHTML(sheet.draft); updateTotals(); $$('#items [data-it="nome"]').pop()?.focus(); break;
+    case 'upload': $('#d-file').click(); break;
+    case 'imp-escolher': $('#imp-file').click(); break;
+    case 'imp-confirmar': await confirmImport(); break;
+    case 'copiar-pix': { const px = pixDoOrc(sheet.draft); if (px) copyText(px.codigo, t, true); break; }
+    case 'copiar-msg': { const txt = msgText(sheet.draft); try { await navigator.clipboard.writeText(txt); toast('Mensagem copiada. Cole no WhatsApp ou no e-mail.'); } catch(e){ showCopyFallback(txt); } break; }
+    case 'pdf': {
+      if (!sheet.id){ if (!(await saveOrc(true))) return; }
+      const d = sheet.draft; const c = cliOf(d.clienteId);
+      const nome = norm(c?.razao || c?.responsavel || 'cliente').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+      try { baixarArquivo(gerarPDF(d), `Orcamento-${d.numero}-${nome}.pdf`); toast('PDF baixado.'); }
+      catch(e){ toast('Não foi possível gerar o PDF.'); }
+      break; }
+  }
+});
+function copyText(v, btn, secret){
+  if (!v) return;
+  const ok = () => { if (btn){ const o = btn.textContent; btn.classList.add('done'); btn.textContent = 'Copiado'; setTimeout(() => { btn.classList.remove('done'); btn.textContent = o; }, 1300); } toast(secret ? 'Copiado. Cole direto no portal.' : `Copiado: ${v}`); };
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = v; ta.setAttribute('readonly',''); ta.style.cssText = 'position:fixed;left:-9999px;top:0'; document.body.appendChild(ta); ta.select(); let done = false; try { done = document.execCommand('copy'); } catch(e){} ta.remove(); done ? ok() : toast('Não consegui copiar automaticamente. Use Mostrar e copie à mão.'); };
+  try { navigator.clipboard.writeText(v).then(ok, fallback); } catch(e){ fallback(); }
+}
+async function tryUnlock(input, btn){
+  const pass = input?.value || '';
+  if (!pass){ input?.focus(); toast('Digite a senha mestra.'); return; }
+  if (btn){ btn.disabled = true; btn.textContent = 'Abrindo…'; }
+  const ok = await desbloquear(pass);
+  if (!ok){ if (btn){ btn.disabled = false; btn.textContent = 'Desbloquear'; } if (input){ input.value = ''; input.focus(); } toast('Senha mestra incorreta.'); return; }
+  toast('Cofre aberto.'); render(); if (sheet){ sheet.noFocus = true; if (sheet.kind === 'importar' && sheet.rawText) buildImportPreview(); else drawSheet(); }
+}
+function showCopyFallback(txt){ const b = $('.sheet-b'); if (!b) return; const ta = document.createElement('textarea'); ta.value = txt; ta.rows = 10; ta.style.cssText = 'width:100%;border:1px solid var(--line);border-radius:6px;padding:8px;background:var(--surface)'; ta.setAttribute('aria-label','Mensagem do orçamento'); b.prepend(ta); ta.focus(); ta.select(); toast('Selecionei o texto. Use Ctrl+C para copiar.'); }
+
+function syncDraft(){
+  if (!sheet || sheet.kind !== 'orc') return;
+  $$('[data-o]').forEach(el => { const k = el.dataset.o; sheet.draft[k] = k === 'desconto' ? toNum(el.value) : el.value; });
+  const px = $('#o-pix'); if (px && !px.disabled){ if (px.checked) delete sheet.draft.semPix; else sheet.draft.semPix = true; }
+  $$('#items .item[data-i]').forEach(row => { const it = sheet.draft.itens[+row.dataset.i]; if (!it) return; $$('[data-it]', row).forEach(inp => { it[inp.dataset.it] = inp.dataset.it === 'nome' ? inp.value : toNum(inp.value); }); });
+}
+document.addEventListener('input', ev => {
+  const el = ev.target;
+  if (el.id === 'cli-q'){ cliFilter.q = el.value; render(); return; }
+  if (el.id === 'e-pixchave'){ const h = $('#h-pix'); if (h){ const err = el.value.trim() ? pixChaveErro($('#e-pixtipo').value, el.value) : ''; h.textContent = err; h.classList.toggle('bad', !!err); } return; }
+  if (el.id === 'cq-q'){ cq.q = el.value; cq.idx = 0; cq.sel = null; shown.clear(); render(); return; }
+  if (el.dataset.mask){ const pos = el.value.length; el.value = el.dataset.mask === 'cnpj' ? maskCNPJ(el.value) : el.dataset.mask === 'cpf' ? maskCPF(el.value) : maskTel(el.value);
+    if (el.dataset.mask !== 'tel'){ const d = dig(el.value), full = el.dataset.mask === 'cnpj' ? 14 : 11; const ok = el.dataset.mask === 'cnpj' ? validCNPJ(d) : validCPF(d); const h = $('#h-' + el.dataset.mask);
+      el.classList.toggle('bad', d.length === full && !ok); if (h){ h.textContent = d.length === full ? (ok ? 'Dígitos conferem.' : 'Dígito verificador não confere.') : ''; h.classList.toggle('bad', d.length === full && !ok); } } return; }
+  if (sheet?.kind === 'orc' && (el.dataset.it || el.dataset.o === 'desconto')){ syncDraft(); updateTotals(); }
+});
+document.addEventListener('change', async ev => {
+  const el = ev.target;
+  if (el.id === 'o-add' && el.value){ syncDraft(); const s = S.servicos.find(x => x.id === el.value); if (s){ const ex = sheet.draft.itens.find(i => i.servicoId === s.id); if (ex) ex.qtd = toNum(ex.qtd) + 1; else sheet.draft.itens.push({servicoId:s.id, nome:s.nome, qtd:1, preco:s.preco}); }
+    el.value = ''; $('#items').innerHTML = itemsHTML(sheet.draft); updateTotals(); return; }
+  if (el.id === 'o-cli'){ syncDraft(); sheet.noFocus = true; drawSheet(); return; }
+  if (el.id === 'a-ver'){ $$('#f-acc input[data-acc], #f-acc [data-o-f="senha"]').forEach(i => i.type = el.checked ? 'text' : 'password'); return; }
+  if (el.id === 'd-file' && el.files.length){ await uploadFiles([...el.files]); el.value = ''; return; }
+  if (el.id === 'bk-file' && el.files[0]){ await importarBackup(el.files[0]); el.value = ''; return; }
+  if (el.id === 'imp-file' && el.files[0]){ await readImport(el.files[0]); el.value = ''; return; }
+  if (el.dataset.it === 'preco' || el.dataset.o === 'desconto'){ el.value = toNum(el.value) ? money2(toNum(el.value)) : ''; }
+});
+document.addEventListener('submit', async ev => {
+  ev.preventDefault();
+  if (ev.target.id === 'f-emp'){
+    const o = Object.fromEntries(new FormData(ev.target).entries());
+    for (const k of Object.keys(o)) o[k] = String(o[k]).trim();
+    if (o.pixChave || o.pixNome || o.pixCidade){
+      const err = pixChaveErro(o.pixTipo, o.pixChave);
+      if (err){ toast(err); $('#e-pixchave').focus(); return; }
+      if (!o.pixNome){ toast('Informe o nome do recebedor do PIX.'); $('#e-pixnome').focus(); return; }
+      if (!o.pixCidade){ toast('Informe a cidade do recebedor do PIX.'); $('#e-pixcidade').focus(); return; }
+    }
+    await saveEmpresa({...o, validade: Number(o.validade)||15}); toast('Ajustes salvos.'); }
+});
+document.addEventListener('keydown', ev => {
+  const el = ev.target, typing = /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+  if (ev.key === 'Escape' && sheet){ closeSheet(); return; }
+  if ((ev.key === '/' && !typing) || ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k')){
+    ev.preventDefault(); closeSheet(); if (route !== 'consulta') location.hash = 'consulta'; setTimeout(() => { const i = $('#cq-q'); if (i){ i.focus(); i.select(); } }, 0); return; }
+  if (el.matches?.('[data-vault-pass]') && ev.key === 'Enter'){ ev.preventDefault(); tryUnlock(el, el.closest('.lock')?.querySelector('button')); return; }
+  if (el.id === 'vault-new2' && ev.key === 'Enter'){ ev.preventDefault(); $('[data-act="criar-cofre"]')?.click(); return; }
+  if (el.id === 'cq-q' && (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'Enter')){
+    const list = cqMatches(); if (!list.length) return; ev.preventDefault();
+    let i = Math.max(0, list.findIndex(c => c.id === cq.sel));
+    if (ev.key === 'ArrowDown') i = Math.min(list.length - 1, i + 1); else if (ev.key === 'ArrowUp') i = Math.max(0, i - 1);
+    cq.idx = i; cq.sel = list[i].id; shown.clear(); render();
+    if (ev.key === 'Enter') $('.kv .copy')?.focus();
+  }
+});
+document.addEventListener('dragover', ev => { const d = ev.target.closest?.('#drop'); if (d){ ev.preventDefault(); d.classList.add('over'); } });
+document.addEventListener('dragleave', ev => { ev.target.closest?.('#drop')?.classList.remove('over'); });
+document.addEventListener('drop', async ev => { const d = ev.target.closest?.('#drop'); if (!d) return; ev.preventDefault(); d.classList.remove('over'); if (ev.dataTransfer.files.length) await uploadFiles([...ev.dataTransfer.files]); });
+
+/* ---------- início: login com Google ---------- */
+const configurado = firebaseConfig && firebaseConfig.apiKey && !/^COLE/.test(firebaseConfig.apiKey);
+let fbApp = null, auth = null, fs = null;
+function telaLogin(msg){
+  const r = $('#login-root');
+  r.innerHTML = `<div class="login"><div class="login-card">
+    <div class="brand"><b>Sanzio</b><small>Contabilidade · clientes e orçamentos</small></div>
+    <p class="muted" style="margin:0">Entre com a sua conta Google. Os dados ficam no seu Firebase e os documentos no seu Google Drive.</p>
+    <button class="btn primary" id="btn-login" style="justify-content:center;padding:10px 14px">Entrar com Google</button>
+    ${msg ? `<div class="hint bad">${esc(msg)}</div>` : ''}
+  </div></div>`;
+  $('#btn-login').onclick = async () => {
+    try { const r = await signInWithPopup(auth, provider()); guardarToken(r); }
+    catch(e){ telaLogin(e.code === 'auth/unauthorized-domain' ? 'Este endereço não está autorizado no Firebase (Authentication › Configurações › Domínios autorizados).' : e.code === 'auth/popup-blocked' ? 'O navegador bloqueou a janela do Google. Libere pop-ups para este site.' : e.code === 'auth/popup-closed-by-user' ? '' : 'Não foi possível entrar. Tente de novo.'); }
+  };
+}
+function contaUI(){
+  const f = $('#mode');
+  if (S.demo){ f.textContent = 'Modo demonstração'; return; }
+  f.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px"><span>Dados salvos no Firebase</span><span class="mono" style="word-break:break-all">${esc(user?.email || '')}</span><button class="btn sm" id="btn-sair" style="align-self:flex-start">Sair</button></div>`;
+  $('#btn-sair').onclick = async () => { bloquear(); driveTok = null; await signOut(auth); };
+}
+function limparEstado(){
+  unsubs.forEach(u => u()); unsubs = [];
+  Object.assign(S, {clientes:[], orcamentos:[], servicos:[], cofre:[], cofreMeta:null, drive:{}, loaded:{}});
+  closeSheet();
+}
+async function boot(){
+  go();
+  if (!configurado){ demoData(); setMode('Modo demonstração'); render(); return; }
+  fbApp = initializeApp(firebaseConfig);
+  auth = getAuth(fbApp);
+  try { fs = initializeFirestore(fbApp, {ignoreUndefinedProperties:true, localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
+  catch(e){ fs = initializeFirestore(fbApp, {ignoreUndefinedProperties:true}); }
+  onAuthStateChanged(auth, async u => {
+    user = u;
+    if (!u){ limparEstado(); render(); telaLogin(); return; }
+    $('#login-root').innerHTML = '';
+    contaUI(); listen(); render();
+  });
+}
+boot();
+</script>
+</body>
+</html>
